@@ -8,24 +8,35 @@ a sexy json reading like the xml-sax.
 目前，JSON的读操作多采用了类似XML的DOM方式，
 即使只读一个字段，也要全部加载和解析，很不经济。
 
-jsonpath，采用类似XML的SAX方式，按需读取，
+jsonpath，采用类似XML的SAX方式，按需读取。
 特别适合，读取的属性数不超过总属性20%的场景。
 
-jsonpath的特点就是：速度快，省资源，规则简单。
+jsonpath的特点就是：速度快，资源省，规则简单，没有Bean。
 
 ## 不适用场景
 
   * JSON写操作。
-  * JSON序列化和反序列化。
+  * JSON序列化和反序列化（Bean<=>String）。
   * JSON读取属性数超过总属性的50%。
 
-## 语法举例
+## 语法说明
 
 完全兼容 JSON Pointer (RFC 6901)。但扩展了以下语法:
 
   * 数组（array）的区间和多选语法(`-`,`,`,`*`)。
   * 对象（object）的多选语法(`,`,`*`)。
   * JSON-Like的转义语法，更像json，使用(`"`)括起来。
+
+有关转义，RFC6901使用`~0`=>`～`，`~1`=>`/`的表示法，
+可读性不好，如RESTFull的权限配置中会有大量`/`变成`~1`。
+
+    Because the characters '~' (%x7E) and '/' (%x2F) have special
+    meanings in JSON Pointer, '~' needs to be encoded as '~0' and '/'
+    needs to be encoded as '~1' when these characters appear in a
+    reference token.
+
+JSON-Like的转义语法，采用双引号(`"`)表示，和JSON一致。
+对key的使用，只需要从JSON中`Ctrl-c,Ctrl-v`就可以了。
 
 ### 通常JSON
 
@@ -114,5 +125,5 @@ JSON-Like(`"`)       | RFC6901 | value(s)
 
 ## 参考资料
 
-[JSON Pointer (RFC 6901)](http://tools.ietf.org/html/rfc6901)
-[JSON (JavaScript Object Notation)](http://json.org/)
+  * [JSON Pointer (RFC 6901)](http://tools.ietf.org/html/rfc6901)
+  * [JSON (JavaScript Object Notation)](http://json.org/)
