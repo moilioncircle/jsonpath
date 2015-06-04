@@ -16,10 +16,6 @@
 package com.moilioncircle.jsonpath
 
 /**
- * Created by leon on 15-6-4.
- */
-
-/**
  *
  * An implementation of RFC6901.
  * Provide a convenient way to access json object using the path which like file path.

@@ -1,4 +1,4 @@
-name := "json-path"
+name := "jsonpath"
 
 version := "0.0.1"
 
