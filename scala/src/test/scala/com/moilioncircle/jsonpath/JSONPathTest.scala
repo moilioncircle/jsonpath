@@ -8,7 +8,7 @@ import org.scalatest.junit.JUnitRunner
  * Created by leon on 15-6-1.
  */
 @RunWith(classOf[JUnitRunner])
-class JSONPathTest extends FunSuite{
+class JSONPathTest extends FunSuite {
   test("json parser") {
     val json =
       """
@@ -34,6 +34,37 @@ class JSONPathTest extends FunSuite{
     val parser = JSONParser(json)
     parser.parser() match {
       case JSONArray(list: List[Any]) => assert(list.toString === "List(1.55E14, 2, 3, JSONArray(List(true, false, null)), JSONObject(Map(a泉bc -> 1.233E-10, bcd -> true, c\\rde -> null)), true, false, null)")
+    }
+  }
+
+  test("json parser1") {
+    val json =
+      """
+        |[
+        |    155e+012,
+        |    2,
+        |    3,
+        |    [
+        |        true,
+        |        false,
+        |        nulul
+        |    ],
+        |    {
+        |        "a泉bc": 1.233e-10,
+        |        "bcd": true,
+        |        "c\rde": null
+        |    },
+        |    true,
+        |    false,
+        |    null
+        |]
+      """.stripMargin
+    val parser = JSONParser(json)
+    try {
+      parser.parser()
+      fail()
+    } catch {
+      case e: JSONLexerException => //pass test
     }
   }
 
