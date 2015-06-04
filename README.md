@@ -3,7 +3,6 @@
 a sexy json reading like the xml-sax.
 
 [![Build Status](https://travis-ci.org/moilioncircle/jsonpath.svg?branch=master)](https://travis-ci.org/moilioncircle/jsonpath)
-[![License](http://img.shields.io/:license-Apache%202-red.svg)](http://www.apache.org/licenses/LICENSE-2.0.txt)
 [![Coverage Status](https://coveralls.io/repos/moilioncircle/jsonpath/badge.svg)](https://coveralls.io/r/moilioncircle/jsonpath)
 
 ## 适用场景

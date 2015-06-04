@@ -22,4 +22,4 @@ import CoverallsPlugin.CoverallsKeys._
 
 coverallsToken := "3v3maIxCBLyDlp1EQoGjdiiXNuMckO6Bz"
 
-encoding := "ISO-8859-1"
+encoding := "UTF-8"
