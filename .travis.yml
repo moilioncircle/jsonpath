@@ -8,6 +8,7 @@ scala:
 branches:
   only:
     - master
-script: "sbt clean coverage test"
-before_script: cd ./scala
+script: 
+    - ./build.sh
+
 
