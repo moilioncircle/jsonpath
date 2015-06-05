@@ -18,6 +18,6 @@ import org.scoverage.coveralls.Imports.CoverallsKeys._
 
 coverallsToken := Some("3v3maIxCBLyDlp1EQoGjdiiXNuMckO6Bz")
 
-coverallsEncoding := "ISO-8859-1"
+coverallsEncoding := "UTF-8"
 
 
