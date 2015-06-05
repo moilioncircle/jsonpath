@@ -9,8 +9,10 @@ scala:
 branches:
   only:
     - master
-script: "sbt clean coverage test"
-after_success: "sbt coveralls"
-before_script:
-    - cd ./scala
+script:
+    - sbt clean coverage test &&
+      sbt coverageAggregate
+after_success:
+    - sbt coveralls
+
 
