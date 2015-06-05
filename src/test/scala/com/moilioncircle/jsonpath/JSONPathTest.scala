@@ -184,5 +184,25 @@ class JSONPathTest extends FunSuite {
     val jp = JSONPointer(json)
     val value = jp.path("/store/book/*/isbn")
     assert(value === List(NotFound, NotFound, "0-553-21311-3", "0-395-19395-8"))
+
+    val value1 = jp.path("/store/book/1-2/isbn")
+    assert(value1 === List(NotFound, "0-553-21311-3"))
+
+    val value2 = jp.path("/store/bicycle/color")
+    assert(value2 === "red")
+  }
+
+  test("json pointer 1") {
+    val json =
+      """
+        |    {
+        |        "a泉bc": 1.233e-10,
+        |        "bcd": true,
+        |        "c\rde": null
+        |    }
+      """.stripMargin
+    val jp = JSONPointer(json)
+    val value = jp.path("/bcd")
+    assert(value === true)
   }
 }
