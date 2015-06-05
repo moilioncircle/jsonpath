@@ -23,7 +23,7 @@ package com.moilioncircle.jsonpath
  * ===RFC6901 example===
  * @example
  * {{{
- *                                          // For example, given the JSON document
+ *                                                   // For example, given the JSON document
  * {
  * "foo": ["bar", "baz"],
  * "": 0,
@@ -55,7 +55,7 @@ package com.moilioncircle.jsonpath
  *
  * ===usage===
  * {{{
- *                                            val json =
+ *                                                     val json =
  * """
  * |{
  * |  "store": {
@@ -323,7 +323,7 @@ class JSONParser(json: String) {
               val s = Integer.valueOf(new String(Array(u1, u2, u3, u4)), 16).toChar
               sb.append(s)
               ch = nextChar()
-            case e  =>
+            case e =>
               sb.append('\\')
               sb.append(e)
               ch = nextChar()
@@ -548,9 +548,7 @@ class JSONPointerParser(str: String) {
         new Rule(sb.toString.toInt)
       } else {
         ch = next()
-        if (!hasNext()) {
-          new Rule(sb.toString.toInt)
-        } else if (ch == '/') {
+        if (ch == '/') {
           back('/')
           new Rule(sb.toString.toInt)
         } else {
@@ -626,6 +624,19 @@ class JSONPointer(str: String) {
     temp
   }
 
+  def reduce(obj: Any): Any = {
+    obj match {
+      case list: List[Any] =>
+        val rs = list.filter(_ != NotFound).map(reduce(_))
+        rs.size match {
+          case 1 => rs(0)
+          case _ => rs
+        }
+      case obj => obj
+    }
+  }
+
+
   private def filter(rule: Rule, temp: Any): Any = {
     temp match {
       case jsonAry: JSONArray =>
@@ -679,13 +690,7 @@ class JSONPointer(str: String) {
             }
           })
         }
-      case list: List[Any] => {
-        val rs = list.map(filter(rule, _))
-        rs.size match {
-          case 1 => rs(0)
-          case _ => rs
-        }
-      }
+      case list: List[Any] => list.map(filter(rule, _))
       case _ => NotFound
     }
   }

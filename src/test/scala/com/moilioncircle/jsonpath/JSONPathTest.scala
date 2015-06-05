@@ -9,6 +9,35 @@ import org.scalatest.junit.JUnitRunner
  */
 @RunWith(classOf[JUnitRunner])
 class JSONPathTest extends FunSuite {
+  test("json parser 10") {
+    val json = "[\"\\u9648\"]"
+    val parser = JSONParser(json)
+    val value = parser.parser()
+    assert(value == JSONArray(List("陈")))
+
+    {
+      val json = "[\"\\u964"
+      val parser = JSONParser(json)
+      try {
+        parser.parser()
+        fail()
+      } catch {
+        case e: JSONSyntaxException =>
+      }
+    }
+
+    {
+      val json = ""
+      val parser = JSONParser(json)
+      try {
+        parser.parser()
+        fail()
+      } catch {
+        case e: JSONSyntaxException =>
+      }
+    }
+  }
+
   test("json parser") {
     val json =
       """
@@ -234,7 +263,7 @@ class JSONPathTest extends FunSuite {
       case e: JSONSyntaxException => //pass test
     }
 
-    val json3 ="[true,fals "
+    val json3 = "[true,fals "
     val parser3 = JSONParser(json3)
     try {
       parser3.parser()
@@ -243,7 +272,7 @@ class JSONPathTest extends FunSuite {
       case e: JSONLexerException => //pass test
     }
 
-    val json4 ="[true,f,true] "
+    val json4 = "[true,f,true] "
     val parser4 = JSONParser(json4)
     try {
       parser4.parser()
@@ -252,7 +281,7 @@ class JSONPathTest extends FunSuite {
       case e: JSONLexerException => //pass test
     }
     {
-      val json4 ="[true,fa,true] "
+      val json4 = "[true,fa,true] "
       val parser4 = JSONParser(json4)
       try {
         parser4.parser()
@@ -262,7 +291,7 @@ class JSONPathTest extends FunSuite {
       }
     }
     {
-      val json4 ="[true,fal,true] "
+      val json4 = "[true,fal,true] "
       val parser4 = JSONParser(json4)
       try {
         parser4.parser()
@@ -272,7 +301,7 @@ class JSONPathTest extends FunSuite {
       }
     }
     {
-      val json4 ="[true,fals,true] "
+      val json4 = "[true,fals,true] "
       val parser4 = JSONParser(json4)
       try {
         parser4.parser()
@@ -282,7 +311,7 @@ class JSONPathTest extends FunSuite {
       }
     }
     {
-      val json4 ="[t,fals,true] "
+      val json4 = "[t,fals,true] "
       val parser4 = JSONParser(json4)
       try {
         parser4.parser()
@@ -292,7 +321,7 @@ class JSONPathTest extends FunSuite {
       }
     }
     {
-      val json4 ="[tr,fals,true] "
+      val json4 = "[tr,fals,true] "
       val parser4 = JSONParser(json4)
       try {
         parser4.parser()
@@ -302,7 +331,7 @@ class JSONPathTest extends FunSuite {
       }
     }
     {
-      val json4 ="[tru,fals,true] "
+      val json4 = "[tru,fals,true] "
       val parser4 = JSONParser(json4)
       try {
         parser4.parser()
@@ -312,7 +341,7 @@ class JSONPathTest extends FunSuite {
       }
     }
     {
-      val json4 ="[n,fals,true] "
+      val json4 = "[n,fals,true] "
       val parser4 = JSONParser(json4)
       try {
         parser4.parser()
@@ -322,7 +351,7 @@ class JSONPathTest extends FunSuite {
       }
     }
     {
-      val json4 ="[nu,fals,true] "
+      val json4 = "[nu,fals,true] "
       val parser4 = JSONParser(json4)
       try {
         parser4.parser()
@@ -332,7 +361,7 @@ class JSONPathTest extends FunSuite {
       }
     }
     {
-      val json4 ="[nul,fals,true] "
+      val json4 = "[nul,fals,true] "
       val parser4 = JSONParser(json4)
       try {
         parser4.parser()
@@ -342,7 +371,7 @@ class JSONPathTest extends FunSuite {
       }
     }
     {
-      val json4 ="[a,fals,true] "
+      val json4 = "[a,fals,true] "
       val parser4 = JSONParser(json4)
       try {
         parser4.parser()
@@ -352,7 +381,7 @@ class JSONPathTest extends FunSuite {
       }
     }
     {
-      val json4 ="{\"key\" true}"
+      val json4 = "[true,false a"
       val parser4 = JSONParser(json4)
       try {
         parser4.parser()
@@ -362,10 +391,36 @@ class JSONPathTest extends FunSuite {
       }
     }
     {
-      val json4 ="[true,false\r\n\t,true] "
+      val json4 = "{ \"key1\":true,\"key2\":false a"
+      val parser4 = JSONParser(json4)
+      try {
+        parser4.parser()
+        fail()
+      } catch {
+        case e: JSONSyntaxException => //pass test
+      }
+    }
+    {
+      val json4 = "[true]"
       val parser4 = JSONParser(json4)
       val value = parser4.parser()
-      assert(value == JSONArray(List(true,false,true)))
+      assert(value === JSONArray(List(true)))
+    }
+    {
+      val json4 = "{\"key\" true}"
+      val parser4 = JSONParser(json4)
+      try {
+        parser4.parser()
+        fail()
+      } catch {
+        case e: JSONSyntaxException => //pass test
+      }
+    }
+    {
+      val json4 = "[true,false\r\n\t,true] "
+      val parser4 = JSONParser(json4)
+      val value = parser4.parser()
+      assert(value == JSONArray(List(true, false, true)))
     }
   }
 
@@ -492,58 +547,63 @@ class JSONPathTest extends FunSuite {
     rules = jp.parsePath()
     assert(rules == List(Rule(0)))
 
+    str = "//"
+    jp = JSONPointerParser(str)
+    rules = jp.parsePath()
+    assert(rules == List(Rule(""), Rule("")))
+
     str = "/0/1"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule(0),Rule(1)))
+    assert(rules == List(Rule(0), Rule(1)))
 
     str = "/0/~abc"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule(0),Rule("~abc")))
-    try{
+    assert(rules == List(Rule(0), Rule("~abc")))
+    try {
       str = ".../"
       jp = JSONPointerParser(str)
       rules = jp.parsePath()
       fail()
-    }catch {
-      case e:JSONPointerSyntaxException=>
+    } catch {
+      case e: JSONPointerSyntaxException =>
     }
 
-    try{
+    try {
       str = ".a"
       jp = JSONPointerParser(str)
       rules = jp.parsePath()
       fail()
-    }catch {
-      case e:JSONPointerSyntaxException=>
+    } catch {
+      case e: JSONPointerSyntaxException =>
     }
 
-    try{
+    try {
       str = "."
       jp = JSONPointerParser(str)
       rules = jp.parsePath()
       fail()
-    }catch {
-      case e:JSONPointerSyntaxException=>
+    } catch {
+      case e: JSONPointerSyntaxException =>
     }
 
-    try{
+    try {
       str = ".."
       jp = JSONPointerParser(str)
       rules = jp.parsePath()
       fail()
-    }catch {
-      case e:JSONPointerSyntaxException=>
+    } catch {
+      case e: JSONPointerSyntaxException =>
     }
 
-    try{
+    try {
       str = "a"
       jp = JSONPointerParser(str)
       rules = jp.parsePath()
       fail()
-    }catch {
-      case e:JSONPointerSyntaxException=>
+    } catch {
+      case e: JSONPointerSyntaxException =>
     }
   }
 
@@ -680,19 +740,68 @@ class JSONPathTest extends FunSuite {
     val value3 = jp.path("/4/bcd/0")
     assert(value3 === true)
 
-    try{
+    try {
       jp.path("/a-b/0")
       fail()
-    }catch {
-      case e:JSONPointerException=>
+    } catch {
+      case e: JSONPointerException =>
     }
 
-    try{
+    try {
       jp.path("/1,/0")
       fail()
-    }catch {
-      case e:JSONPointerException=>
+    } catch {
+      case e: JSONPointerException =>
     }
 
   }
+
+  test("json pointer reduce") {
+    val json =
+      """
+        |{
+        |  "store": {
+        |    "book": [
+        |      { "category": {"reference":true},
+        |        "author": "Nigel Rees",
+        |        "title": "Sayings of the Century",
+        |        "price": 8.95
+        |      },
+        |      { "category": "fiction",
+        |        "author": "Evelyn Waugh",
+        |        "title": "Sword of Honour",
+        |        "price": 12.99
+        |      },
+        |      { "category": "fiction",
+        |        "author": "Herman Melville",
+        |        "title": "Moby Dick",
+        |        "isbn": "0-553-21311-3",
+        |        "price": 8.99
+        |      },
+        |      { "category": "fiction",
+        |        "author": "J. R. R. Tolkien",
+        |        "title": "The Lord\r\F\f\n\b\t\\\"\/\u9648\g of the Rings",
+        |        "isbn": "0-395-19395-8",
+        |        "price": 22.99
+        |      }
+        |    ],
+        |    "bicycle": {
+        |      "color": "red",
+        |      "price": 19.95
+        |    }
+        |  }
+        |}
+      """.stripMargin
+    val jp = JSONPointer(json)
+    val value = jp.reduce(jp.path("/store/book/*/isbn,price"))
+    assert(value === List(8.95, 12.99, List("0-553-21311-3", 8.99), List("0-395-19395-8", 22.99)))
+
+    val value1 = jp.reduce(jp.path("/store/book/1-2/isbn"))
+    assert(value1 === "0-553-21311-3")
+
+    val value2 = jp.reduce(jp.path("/store/book/1-2/abc"))
+    assert(value2 === List())
+
+  }
+
 }
