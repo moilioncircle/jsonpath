@@ -22,7 +22,7 @@ class JSONPathTest extends FunSuite {
         |        null
         |    ],
         |    {
-        |        "a泉bc": 1.233e-10,
+        |        "a\u9648bc": 1.233e-10,
         |        "bcd": true,
         |        "c\rde": null
         |    },
@@ -33,7 +33,7 @@ class JSONPathTest extends FunSuite {
       """.stripMargin
     val parser = JSONParser(json)
     parser.parser() match {
-      case JSONArray(list: List[Any]) => assert(list.toString === "List(1.55E14, 2, 3, JSONArray(List(true, false, null)), JSONObject(Map(a泉bc -> 1.233E-10, bcd -> true, c\rde -> null)), true, false, null)")
+      case JSONArray(list: List[Any]) => assert(list.toString === "List(1.55E14, 2, 3, JSONArray(List(true, false, null)), JSONObject(Map(a陈bc -> 1.233E-10, bcd -> true, c\rde -> null)), true, false, null)")
     }
   }
 
@@ -242,6 +242,131 @@ class JSONPathTest extends FunSuite {
     } catch {
       case e: JSONLexerException => //pass test
     }
+
+    val json4 ="[true,f,true] "
+    val parser4 = JSONParser(json4)
+    try {
+      parser4.parser()
+      fail()
+    } catch {
+      case e: JSONLexerException => //pass test
+    }
+    {
+      val json4 ="[true,fa,true] "
+      val parser4 = JSONParser(json4)
+      try {
+        parser4.parser()
+        fail()
+      } catch {
+        case e: JSONLexerException => //pass test
+      }
+    }
+    {
+      val json4 ="[true,fal,true] "
+      val parser4 = JSONParser(json4)
+      try {
+        parser4.parser()
+        fail()
+      } catch {
+        case e: JSONLexerException => //pass test
+      }
+    }
+    {
+      val json4 ="[true,fals,true] "
+      val parser4 = JSONParser(json4)
+      try {
+        parser4.parser()
+        fail()
+      } catch {
+        case e: JSONLexerException => //pass test
+      }
+    }
+    {
+      val json4 ="[t,fals,true] "
+      val parser4 = JSONParser(json4)
+      try {
+        parser4.parser()
+        fail()
+      } catch {
+        case e: JSONLexerException => //pass test
+      }
+    }
+    {
+      val json4 ="[tr,fals,true] "
+      val parser4 = JSONParser(json4)
+      try {
+        parser4.parser()
+        fail()
+      } catch {
+        case e: JSONLexerException => //pass test
+      }
+    }
+    {
+      val json4 ="[tru,fals,true] "
+      val parser4 = JSONParser(json4)
+      try {
+        parser4.parser()
+        fail()
+      } catch {
+        case e: JSONLexerException => //pass test
+      }
+    }
+    {
+      val json4 ="[n,fals,true] "
+      val parser4 = JSONParser(json4)
+      try {
+        parser4.parser()
+        fail()
+      } catch {
+        case e: JSONLexerException => //pass test
+      }
+    }
+    {
+      val json4 ="[nu,fals,true] "
+      val parser4 = JSONParser(json4)
+      try {
+        parser4.parser()
+        fail()
+      } catch {
+        case e: JSONLexerException => //pass test
+      }
+    }
+    {
+      val json4 ="[nul,fals,true] "
+      val parser4 = JSONParser(json4)
+      try {
+        parser4.parser()
+        fail()
+      } catch {
+        case e: JSONLexerException => //pass test
+      }
+    }
+    {
+      val json4 ="[a,fals,true] "
+      val parser4 = JSONParser(json4)
+      try {
+        parser4.parser()
+        fail()
+      } catch {
+        case e: JSONSyntaxException => //pass test
+      }
+    }
+    {
+      val json4 ="{\"key\" true}"
+      val parser4 = JSONParser(json4)
+      try {
+        parser4.parser()
+        fail()
+      } catch {
+        case e: JSONSyntaxException => //pass test
+      }
+    }
+    {
+      val json4 ="[true,false\r\n\t,true] "
+      val parser4 = JSONParser(json4)
+      val value = parser4.parser()
+      assert(value == JSONArray(List(true,false,true)))
+    }
   }
 
   test("json parser 8") {
@@ -311,6 +436,16 @@ class JSONPathTest extends FunSuite {
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
     assert(rules == List(Rule("~")))
+
+    str = ""
+    jp = JSONPointerParser(str)
+    rules = jp.parsePath()
+    assert(rules == List())
+
+    str = "/"
+    jp = JSONPointerParser(str)
+    rules = jp.parsePath()
+    assert(rules == List(Rule("")))
 
     str = "/~"
     jp = JSONPointerParser(str)

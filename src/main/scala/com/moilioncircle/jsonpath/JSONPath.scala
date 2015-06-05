@@ -243,7 +243,6 @@ class JSONParser(json: String) {
         }
         case e => throw JSONLexerException(s"excepted null but $e at row $row,column $column")
       }
-      case e => throw JSONLexerException(s"excepted null but $e at row $row,column $column")
     }
   }
 
@@ -262,7 +261,6 @@ class JSONParser(json: String) {
         }
         case e => throw JSONLexerException(s"excepted false but '$e' at row $row,column $column")
       }
-      case e => throw JSONLexerException(s"excepted false but '$e' at row $row,column $column")
     }
   }
 
@@ -278,7 +276,6 @@ class JSONParser(json: String) {
         }
         case e => throw JSONLexerException(s"excepted true but '$e' at row $row,column $column")
       }
-      case e => throw JSONLexerException(s"excepted true but '$e' at row $row,column $column")
     }
   }
 
