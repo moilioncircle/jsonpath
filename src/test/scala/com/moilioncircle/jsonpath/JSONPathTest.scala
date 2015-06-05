@@ -50,6 +50,7 @@ class JSONPathTest extends FunSuite {
         |    110e12,
         |    110e-12,
         |    3,
+        |    -100,
         |    [
         |        true,
         |        false,
@@ -232,6 +233,15 @@ class JSONPathTest extends FunSuite {
     } catch {
       case e: JSONSyntaxException => //pass test
     }
+
+    val json3 ="[true,fals "
+    val parser3 = JSONParser(json3)
+    try {
+      parser3.parser()
+      fail()
+    } catch {
+      case e: JSONLexerException => //pass test
+    }
   }
 
   test("json parser 8") {
@@ -341,6 +351,65 @@ class JSONPathTest extends FunSuite {
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
     assert(rules == List(Rule(".."), Rule("")))
+
+    str = "/0"
+    jp = JSONPointerParser(str)
+    rules = jp.parsePath()
+    assert(rules == List(Rule(0)))
+
+    str = "/0/1"
+    jp = JSONPointerParser(str)
+    rules = jp.parsePath()
+    assert(rules == List(Rule(0),Rule(1)))
+
+    str = "/0/~abc"
+    jp = JSONPointerParser(str)
+    rules = jp.parsePath()
+    assert(rules == List(Rule(0),Rule("~abc")))
+    try{
+      str = ".../"
+      jp = JSONPointerParser(str)
+      rules = jp.parsePath()
+      fail()
+    }catch {
+      case e:JSONPointerSyntaxException=>
+    }
+
+    try{
+      str = ".a"
+      jp = JSONPointerParser(str)
+      rules = jp.parsePath()
+      fail()
+    }catch {
+      case e:JSONPointerSyntaxException=>
+    }
+
+    try{
+      str = "."
+      jp = JSONPointerParser(str)
+      rules = jp.parsePath()
+      fail()
+    }catch {
+      case e:JSONPointerSyntaxException=>
+    }
+
+    try{
+      str = ".."
+      jp = JSONPointerParser(str)
+      rules = jp.parsePath()
+      fail()
+    }catch {
+      case e:JSONPointerSyntaxException=>
+    }
+
+    try{
+      str = "a"
+      jp = JSONPointerParser(str)
+      rules = jp.parsePath()
+      fail()
+    }catch {
+      case e:JSONPointerSyntaxException=>
+    }
   }
 
   test("json pointer") {
@@ -367,7 +436,7 @@ class JSONPathTest extends FunSuite {
         |      },
         |      { "category": "fiction",
         |        "author": "J. R. R. Tolkien",
-        |        "title": "The Lord\r\F\f\n\b\t\\g of the Rings",
+        |        "title": "The Lord\r\F\f\n\b\t\\\"\/\u9648\g of the Rings",
         |        "isbn": "0-395-19395-8",
         |        "price": 22.99
         |      }
@@ -417,7 +486,7 @@ class JSONPathTest extends FunSuite {
     assert(value4 === List(List(JSONObject(Map("reference" -> true)), NotFound), List("fiction", NotFound), List("fiction", "0-553-21311-3"), List("fiction", "0-395-19395-8")))
 
     val value5 = jp.path("/store/book/*/*")
-    assert(value5 === List(List(JSONObject(Map("reference" -> true)), "Nigel Rees", "Sayings of the Century", 8.95), List("fiction", "Evelyn Waugh", "Sword of Honour", 12.99), List("Herman Melville", 8.99, "0-553-21311-3", "fiction", "Moby Dick"), List("J. R. R. Tolkien", 22.99, "0-395-19395-8", "fiction", "The Lord\r\f\f\n\b\t\\g of the Rings")))
+    assert(value5 === List(List(JSONObject(Map("reference" -> true)), "Nigel Rees", "Sayings of the Century", 8.95), List("fiction", "Evelyn Waugh", "Sword of Honour", 12.99), List("Herman Melville", 8.99, "0-553-21311-3", "fiction", "Moby Dick"), List("J. R. R. Tolkien", 22.99, "0-395-19395-8", "fiction", "The Lord\r\f\f\n\b\t\\\"/陈\\g of the Rings")))
 
   }
 
@@ -449,7 +518,7 @@ class JSONPathTest extends FunSuite {
         |    ],
         |    {
         |        "a\u9648bc": 1.233e+10,
-        |        "bcd": true,
+        |        "bcd": [true,false],
         |        "c\rde": null,
         |        "0":"object"
         |    },
@@ -472,5 +541,23 @@ class JSONPathTest extends FunSuite {
 
     val value2 = jp.path("/*/1")
     assert(value2 === List(NotFound, NotFound, NotFound, false, NotFound, "abc", NotFound, NotFound, NotFound))
+
+    val value3 = jp.path("/4/bcd/0")
+    assert(value3 === true)
+
+    try{
+      jp.path("/a-b/0")
+      fail()
+    }catch {
+      case e:JSONPointerException=>
+    }
+
+    try{
+      jp.path("/1,/0")
+      fail()
+    }catch {
+      case e:JSONPointerException=>
+    }
+
   }
 }

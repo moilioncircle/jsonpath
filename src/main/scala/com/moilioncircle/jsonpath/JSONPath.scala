@@ -458,7 +458,6 @@ class JSONParser(json: String) {
         return true
       case _ => return false
     }
-    c == ' ' || c == '\r' || c == '\n' || c == '\t'
   }
 
   private def back(char: Char): Unit = {

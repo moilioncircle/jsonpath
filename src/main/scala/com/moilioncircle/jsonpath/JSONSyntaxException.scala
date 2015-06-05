@@ -29,8 +29,6 @@ class JSONSyntaxException protected(message: String) extends RuntimeException(me
 
 object JSONSyntaxException {
   def apply(message: String): JSONSyntaxException = new JSONSyntaxException(message)
-
-  def unapply(ex: JSONSyntaxException): Option[String] = Some(ex.getMessage)
 }
 
 @SerialVersionUID(1L)
@@ -40,8 +38,6 @@ class JSONPointerException protected(message: String, cause: Throwable) extends 
 
 object JSONPointerException {
   def apply(message: String, cause: Throwable): JSONPointerException = new JSONPointerException(message, cause)
-
-  def unapply(ex: JSONPointerException): Option[(String, Throwable)] = Some((ex.getMessage, ex.getCause))
 }
 
 @SerialVersionUID(1L)
@@ -51,8 +47,6 @@ class JSONPointerSyntaxException protected(message: String) extends RuntimeExcep
 
 object JSONPointerSyntaxException {
   def apply(message: String): JSONPointerSyntaxException = new JSONPointerSyntaxException(message)
-
-  def unapply(ex: JSONPointerSyntaxException): Option[String] = Some(ex.getMessage)
 }
 
 @SerialVersionUID(1L)
@@ -62,6 +56,4 @@ class JSONLexerException protected(message: String) extends RuntimeException(mes
 
 object JSONLexerException {
   def apply(message: String): JSONLexerException = new JSONLexerException(message)
-
-  def unapply(ex: JSONLexerException): Option[String] = Some(ex.getMessage)
 }
