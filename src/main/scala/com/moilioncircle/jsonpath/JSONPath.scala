@@ -23,7 +23,7 @@ package com.moilioncircle.jsonpath
  * ===RFC6901 example===
  * @example
  * {{{
- *                                       // For example, given the JSON document
+ *                                          // For example, given the JSON document
  * {
  * "foo": ["bar", "baz"],
  * "": 0,
@@ -55,7 +55,7 @@ package com.moilioncircle.jsonpath
  *
  * ===usage===
  * {{{
- *                                         val json =
+ *                                            val json =
  * """
  * |{
  * |  "store": {
@@ -156,6 +156,7 @@ class JSONParser(json: String) {
             ch match {
               case '}' =>
                 JSONObject(map)
+              case e => throw JSONSyntaxException(s"excepted '}' but '$e' at row $row,column $column")
             }
           case '}' =>
             JSONObject(map)
@@ -183,6 +184,7 @@ class JSONParser(json: String) {
             ch match {
               case ']' =>
                 JSONArray(list)
+              case e => throw JSONSyntaxException(s"excepted ']' but '$e' at row $row,column $column")
             }
           case ']' =>
             JSONArray(list)
@@ -287,12 +289,8 @@ class JSONParser(json: String) {
     while (ch != '"') {
       ch match {
         case '\\' =>
-          sb.append('\\')
           ch = nextChar()
           ch match {
-            case e if (e == '"' || e == '\\' || e == '/' || e == 'b' || e == 'f' || e == 'n' || e == 'r' || e == 't') =>
-              sb.append(e)
-              ch = nextChar()
             case '"' =>
               sb.append('\"')
               ch = nextChar()
@@ -327,6 +325,10 @@ class JSONParser(json: String) {
               val u4 = nextChar()
               val s = Integer.valueOf(new String(Array(u1, u2, u3, u4)), 16).toChar
               sb.append(s)
+              ch = nextChar()
+            case e  =>
+              sb.append('\\')
+              sb.append(e)
               ch = nextChar()
           }
         case e =>
@@ -405,7 +407,11 @@ class JSONParser(json: String) {
       c
     } else {
       column += 1
-      it.next()
+      if (it.hasNext) {
+        it.next()
+      } else {
+        throw JSONSyntaxException("excepted a char but stream ended")
+      }
     }
   }
 
@@ -418,12 +424,20 @@ class JSONParser(json: String) {
       backBuffer = backBuffer.tail
       c
     } else {
-      var c = it.next()
-      while (ignoreLetter(c)) {
-        c = it.next()
+      if (it.hasNext) {
+        var c = it.next()
+        while (ignoreLetter(c)) {
+          if (it.hasNext) {
+            c = it.next()
+          } else {
+            throw JSONSyntaxException("excepted a char but stream ended")
+          }
+        }
+        column += 1
+        c
+      } else {
+        throw JSONSyntaxException("excepted a char but stream ended")
       }
-      column += 1
-      c
     }
   }
 
