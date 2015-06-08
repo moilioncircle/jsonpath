@@ -456,41 +456,43 @@ class JSONPathTest extends FunSuite {
     assert(value1 == JSONObject(Map()))
   }
 
+  import RuleType._
+
   test("json pointer parser") {
     var str = "/abcd/0~00/0123[*]/~0~1"
     var jp = JSONPointerParser(str)
     var rules: List[Rule] = jp.parsePath()
-    assert(rules == List(Rule("abcd"), Rule("0~0"), Rule("0123[*]"), Rule("~/")))
+    assert(rules == List(Rule("abcd", NORMAL_TOKEN), Rule("0~0", NORMAL_TOKEN), Rule("0123[*]", NORMAL_TOKEN), Rule("~/", NORMAL_TOKEN)))
 
     str = "/abcd"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("abcd")))
+    assert(rules == List(Rule("abcd", NORMAL_TOKEN)))
 
     str = "/0"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule(0)))
+    assert(rules == List(Rule(0, NORMAL_TOKEN)))
 
     str = "/012"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("012")))
+    assert(rules == List(Rule("012", NORMAL_TOKEN)))
 
     str = "/12"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule(12)))
+    assert(rules == List(Rule(12, NORMAL_TOKEN)))
 
     str = "/"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("")))
+    assert(rules == List(Rule("", NORMAL_TOKEN)))
 
     str = "/~0"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("~")))
+    assert(rules == List(Rule("~", NORMAL_TOKEN)))
 
     str = ""
     jp = JSONPointerParser(str)
@@ -500,67 +502,83 @@ class JSONPathTest extends FunSuite {
     str = "/"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("")))
+    assert(rules == List(Rule("", NORMAL_TOKEN)))
 
     str = "/~"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("~")))
+    assert(rules == List(Rule("~", NORMAL_TOKEN)))
 
     str = "/~1"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("/")))
+    assert(rules == List(Rule("/", NORMAL_TOKEN)))
 
     str = "/12~0~1"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("12~/")))
+    assert(rules == List(Rule("12~/", NORMAL_TOKEN)))
 
     str = "/0~1/"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("0/"), Rule("")))
+    assert(rules == List(Rule("0/", NORMAL_TOKEN), Rule("", NORMAL_TOKEN)))
 
     str = "../../../"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule(".."), Rule(".."), Rule(".."), Rule("")))
+    assert(rules == List(Rule("..", PATH_TOKEN), Rule("..", PATH_TOKEN), Rule("..", PATH_TOKEN), Rule("", NORMAL_TOKEN)))
 
     str = "./../../"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("."), Rule(".."), Rule(".."), Rule("")))
+    assert(rules == List(Rule(".", CURRENT_PATH_TOKEN), Rule("..", NORMAL_TOKEN), Rule("..", NORMAL_TOKEN), Rule("", NORMAL_TOKEN)))
 
     str = "./"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("."), Rule("")))
+    assert(rules == List(Rule(".", CURRENT_PATH_TOKEN), Rule("", NORMAL_TOKEN)))
 
     str = "../"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule(".."), Rule("")))
+    assert(rules == List(Rule("..", PATH_TOKEN), Rule("", NORMAL_TOKEN)))
 
     str = "/0"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule(0)))
+    assert(rules == List(Rule(0, NORMAL_TOKEN)))
 
     str = "//"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule(""), Rule("")))
+    assert(rules == List(Rule("", NORMAL_TOKEN), Rule("", NORMAL_TOKEN)))
 
     str = "/0/1"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule(0), Rule(1)))
+    assert(rules == List(Rule(0, NORMAL_TOKEN), Rule(1, NORMAL_TOKEN)))
 
     str = "/0/~abc"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule(0), Rule("~abc")))
+    assert(rules == List(Rule(0, NORMAL_TOKEN), Rule("~abc", NORMAL_TOKEN)))
+
+    str = "../."
+    jp = JSONPointerParser(str)
+    rules = jp.parsePath()
+    assert(rules == List(Rule("..", PATH_TOKEN), Rule(".", NORMAL_TOKEN)))
+
+    str = "../..abc"
+    jp = JSONPointerParser(str)
+    rules = jp.parsePath()
+    assert(rules == List(Rule("..", PATH_TOKEN), Rule("..abc", NORMAL_TOKEN)))
+
+    str = "../.abc"
+    jp = JSONPointerParser(str)
+    rules = jp.parsePath()
+    assert(rules == List(Rule("..", PATH_TOKEN), Rule(".abc", NORMAL_TOKEN)))
+
     try {
       str = ".../"
       jp = JSONPointerParser(str)
@@ -802,6 +820,75 @@ class JSONPathTest extends FunSuite {
     val value2 = jp.reduce(jp.path("/store/book/1-2/abc"))
     assert(value2 === List())
 
+  }
+
+  test("json pointer path") {
+    val json =
+      """
+        |{
+        |  "store": {
+        |    "book": [
+        |      { "category": {"reference":true},
+        |        "author": "Nigel Rees",
+        |        "title": "Sayings of the Century",
+        |        "price": 8.95
+        |      },
+        |      { "category": "fiction",
+        |        "author": "Evelyn Waugh",
+        |        "title": "Sword of Honour",
+        |        "price": 12.99
+        |      },
+        |      { "category": "fiction",
+        |        "author": "Herman Melville",
+        |        "title": "Moby Dick",
+        |        "isbn": "0-553-21311-3",
+        |        "price": 8.99
+        |      },
+        |      { "category": "fiction",
+        |        "author": "J. R. R. Tolkien",
+        |        "title": "The Lord\r\F\f\n\b\t\\\"\/\u9648\g of the Rings",
+        |        "isbn": "0-395-19395-8",
+        |        "price": 22.99
+        |      }
+        |    ],
+        |    "bicycle": {
+        |      "color": "red",
+        |      "price": 19.95,
+        |      "..": false
+        |    }
+        |  }
+        |}
+      """.stripMargin
+    val jp = JSONPointer(json)
+    jp.path("/store/book/3/")
+
+    val value1 = jp.path("./isbn")
+    assert(value1 === "0-395-19395-8")
+
+    val value2 = jp.path("../2/author")
+    assert(value2 === "Herman Melville")
+
+    val value3 = jp.path("../../bicycle/price")
+    assert(value3 === 19.95)
+
+    val value4 = jp.path("/store/bicycle/price")
+    assert(value4 === 19.95)
+
+    val value5 = jp.path("../color")
+    assert(value5 === "red")
+
+    val value6 = jp.path("../~2")
+    assert(value6 === false)
+
+    val value7 = jp.path("../..")
+    assert(value7 === false)
+
+    {
+      val json = "[]"
+      val jp = JSONPointer(json)
+      val value8 = jp.path("")
+      assert(value8 === JSONArray(List.empty))
+    }
   }
 
 }

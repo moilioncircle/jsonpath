@@ -15,6 +15,8 @@
  */
 package com.moilioncircle.jsonpath
 
+import com.moilioncircle.jsonpath.RuleType.RuleType
+
 /**
  *
  * An implementation of RFC6901.
@@ -23,7 +25,7 @@ package com.moilioncircle.jsonpath
  * ===RFC6901 example===
  * @example
  * {{{
- *                                                   // For example, given the JSON document
+ *                                                                               // For example, given the JSON document
  * {
  * "foo": ["bar", "baz"],
  * "": 0,
@@ -55,7 +57,7 @@ package com.moilioncircle.jsonpath
  *
  * ===usage===
  * {{{
- *                                                     val json =
+ *                                                                                 val json =
  * """
  * |{
  * |  "store": {
@@ -107,7 +109,7 @@ case class JSONObject(map: Map[String, Any]) extends JSONType
 
 case class JSONArray(list: List[Any]) extends JSONType
 
-sealed case class Rule(rule: Any)
+sealed case class Rule(rule: Any, ruleType: RuleType)
 
 case object NotFound
 
@@ -468,10 +470,16 @@ class JSONParser(json: String) {
   }
 }
 
+object RuleType extends Enumeration {
+  type RuleType = Value
+  val NORMAL_TOKEN, PATH_TOKEN, CURRENT_PATH_TOKEN = Value
+}
+
 class JSONPointerParser(str: String) {
 
   private val it: Iterator[Char] = str.iterator
   private var backBuffer = List.empty[Char]
+  private var isPathToken = false
 
   def parsePath(): List[Rule] = {
     if (!hasNext()) {
@@ -495,7 +503,8 @@ class JSONPointerParser(str: String) {
                   ch = next()
                   if (ch == '/') {
                     back('/')
-                    new Rule("..") +: parsePath()
+                    isPathToken = true
+                    Rule("..", RuleType.PATH_TOKEN) +: parsePath()
                   } else {
                     throw JSONPointerSyntaxException(s"excepted '/' but '$ch'")
                   }
@@ -504,7 +513,7 @@ class JSONPointerParser(str: String) {
                 }
               case '/' =>
                 back('/')
-                new Rule(".") +: parsePath()
+                Rule(".", RuleType.CURRENT_PATH_TOKEN) +: parsePath()
               case e => throw JSONPointerSyntaxException(s"excepted ['/' or '.'] but '$e'")
             }
           } else {
@@ -517,13 +526,16 @@ class JSONPointerParser(str: String) {
 
   private def parseRule(): Rule = {
     if (!hasNext()) {
-      return new Rule("")
+      isPathToken = false
+      return Rule("", RuleType.NORMAL_TOKEN)
     }
     var ch = next()
     if (ch == '/') {
+      isPathToken = false
       back('/')
-      new Rule("")
+      Rule("", RuleType.NORMAL_TOKEN)
     } else if (ch > '0' && ch <= '9') {
+      isPathToken = false
       val sb = new StringBuilder
       sb.append(ch)
       while (hasNext() && {
@@ -533,33 +545,70 @@ class JSONPointerParser(str: String) {
         sb.append(ch)
       }
       if (!hasNext()) {
-        new Rule(sb.toString.toInt)
+        Rule(sb.toString.toInt, RuleType.NORMAL_TOKEN)
       } else if (ch == '/') {
         back('/')
-        new Rule(sb.toString.toInt)
+        Rule(sb.toString.toInt, RuleType.NORMAL_TOKEN)
       } else {
         parseString(ch, sb)
-        new Rule(sb.toString)
+        Rule(sb.toString, RuleType.NORMAL_TOKEN)
       }
     } else if (ch == '0') {
+      isPathToken = false
       val sb = new StringBuilder
       sb.append(ch)
       if (!hasNext()) {
-        new Rule(sb.toString.toInt)
+        Rule(sb.toString.toInt, RuleType.NORMAL_TOKEN)
       } else {
         ch = next()
         if (ch == '/') {
           back('/')
-          new Rule(sb.toString.toInt)
+          Rule(sb.toString.toInt, RuleType.NORMAL_TOKEN)
         } else {
           parseString(ch, sb)
-          new Rule(sb.toString)
+          Rule(sb.toString, RuleType.NORMAL_TOKEN)
+        }
+      }
+    } else if (ch == '.') {
+      val sb = new StringBuilder
+      sb.append(ch)
+      if (!hasNext()) {
+        isPathToken = false
+        Rule(sb.toString, RuleType.NORMAL_TOKEN)
+      } else {
+        ch = next()
+        if (ch == '.') {
+          sb.append(ch)
+          if (!hasNext()) {
+            isPathToken = false
+            Rule(sb.toString, RuleType.NORMAL_TOKEN)
+          } else {
+            ch = next()
+            if (ch == '/') {
+              back('/')
+              if (!isPathToken) {
+                Rule(sb.toString, RuleType.NORMAL_TOKEN)
+              } else {
+                isPathToken = true
+                Rule(sb.toString, RuleType.PATH_TOKEN)
+              }
+            } else {
+              parseString(ch, sb)
+              isPathToken = false
+              Rule(sb.toString, RuleType.NORMAL_TOKEN)
+            }
+          }
+        } else {
+          parseString(ch, sb)
+          isPathToken = false
+          Rule(sb.toString, RuleType.NORMAL_TOKEN)
         }
       }
     } else {
       val sb = new StringBuilder
       parseString(ch, sb)
-      new Rule(sb.toString)
+      isPathToken = false
+      Rule(sb.toString, RuleType.NORMAL_TOKEN)
     }
   }
 
@@ -577,6 +626,8 @@ class JSONPointerParser(str: String) {
             sb.append('~')
           } else if (c == '1') {
             sb.append('/')
+          } else if (c == '2') {
+            sb.append("..")
           } else {
             sb.append('~')
             sb.append(c)
@@ -616,12 +667,32 @@ class JSONPointerParser(str: String) {
 
 class JSONPointer(str: String) {
   private val json: JSONType = JSONParser(str).parser()
+  private var original = List.empty[Rule]
 
   def path(path: String): Any = {
     var temp: Any = json
-    val rules = JSONPointerParser(path).parsePath()
+    var rules = JSONPointerParser(path).parsePath()
+    rules match {
+      case Rule(rule: Any, ruleType: RuleType) :: tail =>
+        ruleType match {
+          case RuleType.CURRENT_PATH_TOKEN => rules = original ::: tail
+          case RuleType.PATH_TOKEN => rules = detectPath(original, rules)
+          case RuleType.NORMAL_TOKEN => original = rules
+        }
+      case Nil =>
+    }
     rules.foreach(rule => temp = filter(rule, temp))
     temp
+  }
+
+  private def detectPath(original: List[Rule], current: List[Rule]): List[Rule] = {
+    current match {
+      case Rule(rule: Any, ruleType: RuleType) :: tail => ruleType match {
+        case RuleType.PATH_TOKEN => detectPath(original.reverse.tail.reverse, tail)
+        case e => original ::: current
+      }
+      case Nil => original
+    }
   }
 
   def reduce(obj: Any): Any = {
@@ -635,7 +706,6 @@ class JSONPointer(str: String) {
       case obj => obj
     }
   }
-
 
   private def filter(rule: Rule, temp: Any): Any = {
     temp match {
