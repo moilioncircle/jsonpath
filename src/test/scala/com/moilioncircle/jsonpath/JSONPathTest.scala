@@ -891,4 +891,71 @@ class JSONPathTest extends FunSuite {
     }
   }
 
+  test("RFC 6901") {
+    val json =
+      """
+        |{
+        |    "foo": ["bar", "baz"],
+        |    "": 0,
+        |    "a/b": 1,
+        |    "c%d": 2,
+        |    "e^f": 3,
+        |    "g|h": 4,
+        |    "i\\j": 5,
+        |    "k\"l": 6,
+        |    " ": 7,
+        |    "m~n": 8,
+        |    "0,2":9,
+        |    "0-2":10,
+        |    "*":11
+        |}
+      """.stripMargin
+    val jp = JSONPointer(json)
+    var value = jp.path("")
+    assert(value === JSONObject(Map("" -> 0, "*" -> 11, "c%d" -> 2, "i\\j" -> 5, "0,2" -> 9, "m~n" -> 8, "a/b" -> 1, " " -> 7, "g|h" -> 4, "0-2" -> 10, "k\"l" -> 6, "e^f" -> 3, "foo" -> JSONArray(List("bar", "baz")))))
+
+    value = jp.path("/foo")
+    assert(value === JSONArray(List("bar","baz")))
+
+    value = jp.path("/foo/0")
+    assert(value === "bar")
+
+    value = jp.path("/")
+    assert(value === 0)
+
+    value = jp.path("/a~1b")
+    assert(value === 1)
+
+    value = jp.path("/c%d")
+    assert(value === 2)
+
+    value = jp.path("/e^f")
+    assert(value === 3)
+
+    value = jp.path("/g|h")
+    assert(value === 4)
+
+    value = jp.path("/i\\j")
+    assert(value === 5)
+
+    value = jp.path("/k\"l")
+    assert(value === 6)
+
+    value = jp.path("/ ")
+    assert(value === 7)
+
+    value = jp.path("/m~0n")
+    assert(value === 8)
+
+    value = jp.path("/0,2")
+    assert(value === 9)
+
+    value = jp.path("/0-2")
+    assert(value === 10)
+
+    value = jp.path("/*")
+    assert(value === 11)
+
+  }
+
 }
