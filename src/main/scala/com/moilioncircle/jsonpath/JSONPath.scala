@@ -25,7 +25,7 @@ import com.moilioncircle.jsonpath.RuleType.RuleType
  * ===RFC6901 example===
  * @example
  * {{{
- *                                                                               // For example, given the JSON document
+ *                                                                                // For example, given the JSON document
  * {
  * "foo": ["bar", "baz"],
  * "": 0,
@@ -57,7 +57,7 @@ import com.moilioncircle.jsonpath.RuleType.RuleType
  *
  * ===usage===
  * {{{
- *                                                                                 val json =
+ *                                                                                  val json =
  * """
  * |{
  * |  "store": {
@@ -345,15 +345,16 @@ class JSONParser(json: String) {
       sb.append('-')
       next = nextChar()
     }
-    if (next == '0') {
-      sb.append('0')
-      next = nextChar()
-    } else if (next > '0' && next <= '9') {
-      sb.append(next)
-      next = nextChar()
-      while (parseDigit(next, sb)) {
+    next match {
+      case '0' =>
+        sb.append('0')
         next = nextChar()
-      }
+      case ch if ch > '0' && ch <= '9' =>
+        sb.append(next)
+        next = nextChar()
+        while (parseDigit(next, sb)) {
+          next = nextChar()
+        }
     }
 
     if (next == '.' || next == 'e' || next == 'E') {
@@ -409,7 +410,7 @@ class JSONParser(json: String) {
       if (it.hasNext) {
         it.next()
       } else {
-        throw JSONSyntaxException("excepted a char but stream ended")
+        throw JSONSyntaxException(s"excepted a char but stream ended at row $row,column $column")
       }
     }
   }
@@ -429,13 +430,13 @@ class JSONParser(json: String) {
           if (it.hasNext) {
             c = it.next()
           } else {
-            throw JSONSyntaxException("excepted a char but stream ended")
+            throw JSONSyntaxException(s"excepted a char but stream ended at row $row,column $column")
           }
         }
         column += 1
         c
       } else {
-        throw JSONSyntaxException("excepted a char but stream ended")
+        throw JSONSyntaxException(s"excepted a char but stream ended  at row $row,column $column")
       }
     }
   }

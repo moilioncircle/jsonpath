@@ -920,6 +920,12 @@ class JSONPathTest extends FunSuite {
     value = jp.path("/foo/0")
     assert(value === "bar")
 
+    value = jp.path("../../")
+    assert(value === 0)
+
+    value = jp.path("../../ ")
+    assert(value === 7)
+
     value = jp.path("/")
     assert(value === 0)
 
