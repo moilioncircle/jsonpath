@@ -472,7 +472,7 @@ class JSONPathTest extends FunSuite {
     str = "/0"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule(0, NORMAL_TOKEN)))
+    assert(rules == List(Rule("0", NORMAL_TOKEN)))
 
     str = "/012"
     jp = JSONPointerParser(str)
@@ -482,7 +482,7 @@ class JSONPathTest extends FunSuite {
     str = "/12"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule(12, NORMAL_TOKEN)))
+    assert(rules == List(Rule("12", NORMAL_TOKEN)))
 
     str = "/"
     jp = JSONPointerParser(str)
@@ -547,7 +547,7 @@ class JSONPathTest extends FunSuite {
     str = "/0"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule(0, NORMAL_TOKEN)))
+    assert(rules == List(Rule("0", NORMAL_TOKEN)))
 
     str = "//"
     jp = JSONPointerParser(str)
@@ -557,12 +557,12 @@ class JSONPathTest extends FunSuite {
     str = "/0/1"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule(0, NORMAL_TOKEN), Rule(1, NORMAL_TOKEN)))
+    assert(rules == List(Rule("0", NORMAL_TOKEN), Rule("1", NORMAL_TOKEN)))
 
     str = "/0/~abc"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule(0, NORMAL_TOKEN), Rule("~abc", NORMAL_TOKEN)))
+    assert(rules == List(Rule("0", NORMAL_TOKEN), Rule("~abc", NORMAL_TOKEN)))
 
     str = "../."
     jp = JSONPointerParser(str)
@@ -665,24 +665,24 @@ class JSONPathTest extends FunSuite {
     val value = jp.path("/store/book/*/isbn")
     assert(value === List(NotFound, NotFound, "0-553-21311-3", "0-395-19395-8"))
 
-    val value1 = jp.path("/store/book/1-2/isbn")
+    val value1 = jp.path("/store/book/1:2/isbn")
     assert(value1 === List(NotFound, "0-553-21311-3"))
 
     val value2 = jp.path("/store/bicycle/color")
     assert(value2 === "red")
 
+    val valuen = jp.path("/store/book/3:2/isbn")
+    assert(valuen === List("0-395-19395-8", "0-553-21311-3"))
+
     try {
-      jp.path("/store/book/3-2/isbn")
+      jp.path("/store/book/abc/isbn")
       fail()
     } catch {
       case e: JSONPointerException =>
     }
 
-    val value3 = jp.path("/store/book/abc/isbn")
-    assert(value3 === NotFound)
-
     try {
-      jp.path("/store/book/1-2-3/isbn")
+      jp.path("/store/book/1:2:3/isbn")
       fail()
     } catch {
       case e: JSONPointerException =>
@@ -759,7 +759,7 @@ class JSONPathTest extends FunSuite {
     assert(value3 === true)
 
     try {
-      jp.path("/a-b/0")
+      jp.path("/a:b/0")
       fail()
     } catch {
       case e: JSONPointerException =>
@@ -814,10 +814,10 @@ class JSONPathTest extends FunSuite {
     val value = jp.reduce(jp.path("/store/book/*/isbn,price"))
     assert(value === List(8.95, 12.99, List("0-553-21311-3", 8.99), List("0-395-19395-8", 22.99)))
 
-    val value1 = jp.reduce(jp.path("/store/book/1-2/isbn"))
+    val value1 = jp.reduce(jp.path("/store/book/1:2/isbn"))
     assert(value1 === "0-553-21311-3")
 
-    val value2 = jp.reduce(jp.path("/store/book/1-2/abc"))
+    val value2 = jp.reduce(jp.path("/store/book/1:2/abc"))
     assert(value2 === List())
 
   }
@@ -860,7 +860,7 @@ class JSONPathTest extends FunSuite {
         |}
       """.stripMargin
     val jp = JSONPointer(json)
-    jp.path("/store/book/3/")
+    jp.path("/store/book/3")
 
     val value1 = jp.path("./isbn")
     assert(value1 === "0-395-19395-8")
@@ -915,7 +915,7 @@ class JSONPathTest extends FunSuite {
     assert(value === JSONObject(Map("" -> 0, "*" -> 11, "c%d" -> 2, "i\\j" -> 5, "0,2" -> 9, "m~n" -> 8, "a/b" -> 1, " " -> 7, "g|h" -> 4, "0-2" -> 10, "k\"l" -> 6, "e^f" -> 3, "foo" -> JSONArray(List("bar", "baz")))))
 
     value = jp.path("/foo")
-    assert(value === JSONArray(List("bar","baz")))
+    assert(value === JSONArray(List("bar", "baz")))
 
     value = jp.path("/foo/0")
     assert(value === "bar")
@@ -962,6 +962,121 @@ class JSONPathTest extends FunSuite {
     value = jp.path("/*")
     assert(value === 11)
 
+  }
+
+  test("json pointer neg number") {
+    val json =
+      """
+        |[
+        |    155e+012,
+        |    0.55,
+        |    0,
+        |    9,
+        |    100,
+        |    110e+12,
+        |    110e12,
+        |    110e-12,
+        |    3,
+        |    -100,
+        |    [
+        |        true,
+        |        false,
+        |        null
+        |    ],
+        |    {
+        |        "a泉bc": 1.233e-10,
+        |        "bcd": true,
+        |        "c\rde": null
+        |    },
+        |    true,
+        |    false,
+        |    null
+        |]
+      """.stripMargin
+
+    {
+      val jp = JSONPointer(json)
+      val value = jp.path("/-2")
+      assert(value === false)
+    }
+    {
+      val jp = JSONPointer(json)
+      val value = jp.path("/-2,-1")
+      assert(value === List(false, null))
+    }
+    {
+      val jp = JSONPointer(json)
+      val value = jp.path("/:")
+      assert(value === List(1.55E14, 0.55, 0, 9, 100, 1.1E14, 1.1E14, 1.1E-10, 3, -100, JSONArray(List(true, false, null)), JSONObject(Map("a泉bc" -> 1.233E-10, "bcd" -> true, "c\rde" -> null)), true, false, null))
+    }
+    {
+      try {
+        val jp = JSONPointer(json)
+        jp.path("/9a")
+        fail()
+      } catch {
+        case e: JSONPointerException => // PASS
+      }
+    }
+    {
+      try {
+        val jp = JSONPointer(json)
+        jp.path("/9a,9b,")
+        fail()
+      } catch {
+        case e: JSONPointerException => // PASS
+      }
+    }
+    {
+      try {
+        val jp = JSONPointer(json)
+        jp.path("/")
+        fail()
+      } catch {
+        case e: JSONPointerException => // PASS
+      }
+    }
+    {
+      try {
+        val jp = JSONPointer(json)
+        jp.path("/-")
+        fail()
+      } catch {
+        case e: JSONPointerException => // PASS
+      }
+    }
+    {
+      try {
+        val jp = JSONPointer(json)
+        jp.path("/-01")
+        fail()
+      } catch {
+        case e: JSONPointerException => // PASS
+      }
+    }
+    {
+      try {
+        val jp = JSONPointer(json)
+        jp.path("/100")
+        fail()
+      } catch {
+        case e: JSONPointerException => // PASS
+      }
+    }
+    {
+      try {
+        val jp = JSONPointer(json)
+        jp.path("/ , , ")
+        fail()
+      } catch {
+        case e: JSONPointerException => // PASS
+      }
+    }
+    {
+      val jp = JSONPointer(json)
+      val value = jp.path("/-1,5,-2")
+      assert(value === List(null, 1.1E14, false))
+    }
   }
 
 }

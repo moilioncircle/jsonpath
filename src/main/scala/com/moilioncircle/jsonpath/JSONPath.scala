@@ -25,7 +25,7 @@ import com.moilioncircle.jsonpath.RuleType.RuleType
  * ===RFC6901 example===
  * @example
  * {{{
- *                                                                                // For example, given the JSON document
+ *                                                                                                                                 // For example, given the JSON document
  * {
  * "foo": ["bar", "baz"],
  * "": 0,
@@ -57,7 +57,7 @@ import com.moilioncircle.jsonpath.RuleType.RuleType
  *
  * ===usage===
  * {{{
- *                                                                                  val json =
+ *                                                                                                                                   val json =
  * """
  * |{
  * |  "store": {
@@ -535,41 +535,6 @@ class JSONPointerParser(str: String) {
       isPathToken = false
       back('/')
       Rule("", RuleType.NORMAL_TOKEN)
-    } else if (ch > '0' && ch <= '9') {
-      isPathToken = false
-      val sb = new StringBuilder
-      sb.append(ch)
-      while (hasNext() && {
-        ch = next()
-        ch >= '0' && ch <= '9'
-      }) {
-        sb.append(ch)
-      }
-      if (!hasNext()) {
-        Rule(sb.toString.toInt, RuleType.NORMAL_TOKEN)
-      } else if (ch == '/') {
-        back('/')
-        Rule(sb.toString.toInt, RuleType.NORMAL_TOKEN)
-      } else {
-        parseString(ch, sb)
-        Rule(sb.toString, RuleType.NORMAL_TOKEN)
-      }
-    } else if (ch == '0') {
-      isPathToken = false
-      val sb = new StringBuilder
-      sb.append(ch)
-      if (!hasNext()) {
-        Rule(sb.toString.toInt, RuleType.NORMAL_TOKEN)
-      } else {
-        ch = next()
-        if (ch == '/') {
-          back('/')
-          Rule(sb.toString.toInt, RuleType.NORMAL_TOKEN)
-        } else {
-          parseString(ch, sb)
-          Rule(sb.toString, RuleType.NORMAL_TOKEN)
-        }
-      }
     } else if (ch == '.') {
       val sb = new StringBuilder
       sb.append(ch)
@@ -712,44 +677,31 @@ class JSONPointer(str: String) {
     temp match {
       case jsonAry: JSONArray =>
         rule.rule match {
-          case index: Int => jsonAry.list(index)
           case str: String =>
-            if (str.indexOf('-') >= 0) {
-              val ary = str.split("-")
-              if (ary.length != 2) {
-                val size = ary.length
-                throw JSONPointerException(s"excepted 2 numbers but $size", null)
-              }
-              try {
-                val from = ary(0).toInt
-                val until = ary(1).toInt
-                if (from > until) {
-                  throw JSONPointerException(s"excepted $from <= $until", null)
-                }
-                jsonAry.list.slice(from, until + 1)
-              } catch {
-                case e: NumberFormatException => throw JSONPointerException(e.getMessage + " excepted number", e.getCause)
-              }
+            val arySize = jsonAry.list.size
+            if (str.indexOf(':') >= 0) {
+              val from: Int = parseArrayIndex(str.substring(0, str.indexOf(":")), arySize, 0)
+              val until = parseArrayIndex(str.substring(str.indexOf(":") + 1), arySize, arySize - 1)
+              if (from > until) jsonAry.list.slice(until, from + 1).reverse else jsonAry.list.slice(from, until + 1)
             } else if (str.indexOf(',') >= 0) {
               val ary = str.split(",")
               if (ary.length < 2) {
                 val size = ary.length
-                throw JSONPointerException(s"excepted >=2 numbers but $size", null)
+                throw JSONPointerException(s"excepted >=2 numbers but size is $size", null)
               }
-              try {
-                ary.map(e => jsonAry.list(e.toInt)).toList
-              } catch {
-                case e: NumberFormatException => throw JSONPointerException(e.getMessage + " excepted number", e.getCause)
-              }
+
+              ary.map(e => {
+                jsonAry.list(parseArrayIndex(e, arySize, throw JSONPointerException(s"excepted a number but '$e'", null)))
+              }).toList
+
             } else if (str.trim == "*") {
               jsonAry.list
             } else {
-              NotFound
+              jsonAry.list(parseArrayIndex(str, arySize, throw JSONPointerException(s"excepted a number but '$str'", null)))
             }
         }
       case jsonObj: JSONObject =>
         rule.rule match {
-          case index: Int => jsonObj.map.getOrElse(index.toString, NotFound)
           case str: String => jsonObj.map.getOrElse(str, {
             if (str.indexOf(",") >= 0) {
               val keys = str.split(",").toList
@@ -764,5 +716,82 @@ class JSONPointer(str: String) {
       case list: List[Any] => list.map(filter(rule, _))
       case _ => NotFound
     }
+  }
+
+  private def parseArrayIndex(str: String, size: Int, default: => Int): Int = {
+    val it: Iterator[Char] = str.trim.iterator
+    def parseDigit(c: Char, sb: StringBuilder): Boolean = {
+      c match {
+        case c if c >= '0' && c <= '9' =>
+          sb.append(c)
+          true
+        case e =>
+          false
+      }
+    }
+
+    def nextChar(): Char = {
+      it.next()
+    }
+
+    def hasNext(): Boolean = {
+      it.hasNext
+    }
+
+    def str2int(str: String, size: Int): Int = {
+      val value = str.toInt match {
+        case v if v < 0 => size + v
+        case v => v
+      }
+      if (value < 0 || value >= size) {
+        throw JSONPointerException(s"out of range,array size is $size", null)
+      } else {
+        value
+      }
+    }
+
+    if (!hasNext) {
+      default
+    } else {
+      val sb = new StringBuilder
+      var next = nextChar()
+      if (next == '-') {
+        sb.append('-')
+        if (hasNext) {
+          next = nextChar()
+        } else {
+          throw JSONPointerException(s"excepted a number but '$str'", null)
+        }
+      }
+      next match {
+        case '0' =>
+          sb.append('0')
+          if (!hasNext) {
+            0
+          } else {
+            throw JSONPointerException(s"excepted a number but '$str'", null)
+          }
+
+        case ch if ch > '0' && ch <= '9' =>
+          sb.append(next)
+          if (hasNext) {
+            next = nextChar()
+            while (parseDigit(next, sb)) {
+              if (hasNext) {
+                next = nextChar()
+              } else {
+                return str2int(sb.toString(), size)
+              }
+            }
+            if (next < '0' || next > '9') {
+              throw JSONPointerException(s"excepted a number but '$str'", null)
+            }
+          }
+          str2int(sb.toString(), size)
+
+        case _ => throw JSONPointerException(s"excepted a number but '$str'", null)
+      }
+    }
+
   }
 }
