@@ -1,0 +1,14 @@
+language: scala
+sudo: required
+jdk:
+    - oraclejdk7
+    - oraclejdk8
+scala:
+    - 2.11.2
+    - 2.11.6
+branches:
+  only:
+    - master
+script: "sbt clean coverage test"
+after_success: "sbt coveralls"
+
