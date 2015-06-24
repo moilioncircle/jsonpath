@@ -2,8 +2,8 @@
 
 a sexy json reading like the xml-sax.
 
-[![Build Status](https://travis-ci.org/moilioncircle/jsonpath.svg?branch=master)](https://travis-ci.org/moilioncircle/jsonpath)
-[![Coverage Status](https://coveralls.io/repos/moilioncircle/jsonpath/badge.svg?branch=master)](https://coveralls.io/r/moilioncircle/jsonpath?branch=master)
+[![Build Status](https://travis-ci.org/leonchen83/jsonpath.svg?branch=master)](https://travis-ci.org/leonchen83/jsonpath)
+[![Coverage Status](https://coveralls.io/repos/leonchen83/jsonpath/badge.svg?branch=master)](https://coveralls.io/r/leonchen83/jsonpath?branch=master)
 
 ## 适用场景
 

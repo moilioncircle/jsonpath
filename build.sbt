@@ -16,7 +16,7 @@ libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.1" % "test"
 
 import org.scoverage.coveralls.Imports.CoverallsKeys._
 
-coverallsToken := Some("3v3maIxCBLyDlp1EQoGjdiiXNuMckO6Bz")
+coverallsToken := Some("z1zqynRANfF57FdVbo9nrin073RZWtEoy")
 
 coverallsEncoding := "UTF-8"
 
