@@ -24,8 +24,7 @@ import com.moilioncircle.jsonpath.RuleType.RuleType
  *
  * ===RFC6901 example===
  * @example
- * {{{
- *                                                                                                                                                     // For example, given the JSON document
+ * {{{// For example, given the JSON document
  * {
  * "foo": ["bar", "baz"],
  * "": 0,
@@ -56,8 +55,7 @@ import com.moilioncircle.jsonpath.RuleType.RuleType
  * }}}
  *
  * ===usage===
- * {{{
- *                                                                                                                                                       val json =
+ * {{{val json =
  * """
  * |{
  * |  "store": {
@@ -103,24 +101,17 @@ import com.moilioncircle.jsonpath.RuleType.RuleType
  * @see [[http://json.org "JSON (JavaScript Object Notation)"]]
  *
  */
-abstract class JSONType
+sealed case class Rule(rule: String, ruleType: RuleType = RuleType.TOKEN, filter: Option[Any] = None, splits: List[String] = List.empty[String])
 
-case class JSONObject(map: Map[String, _]) extends JSONType
-
-case class JSONArray(list: List[_]) extends JSONType
-
-sealed case class Rule(rule: String, ruleType: RuleType)
+object RuleType extends Enumeration {
+  type RuleType = Value
+  val TOKEN, WILDCARD, SPLIT = Value
+}
 
 case object NotFound
 
 object JSONPointerParser {
   def apply(str: String): JSONPointerParser = new JSONPointerParser(str)
-}
-
-object JSONParser {
-  def apply(json: String): JSONParser = new JSONParser(json)
-
-  def apply(jsonIter: Iterator[Char]): JSONParser = new JSONParser(jsonIter)
 }
 
 object JSONPointer {
@@ -129,372 +120,10 @@ object JSONPointer {
   def apply(): JSONPointer = new JSONPointer
 }
 
-class JSONParser {
-  def this(json: String) {
-    this()
-    it = json.iterator
-  }
-
-  def this(json: Iterator[Char]) {
-    this()
-    it = json
-  }
-
-  private var it: Iterator[Char] = _
-  private var column: Int = 0
-  private var row: Int = 0
-  private var backBuffer = List.empty[Char]
-  private var backCharPosition = List.empty[(Int, Int)]
-
-  def parser(): JSONType = {
-    next() match {
-      case '{' => parseObject()
-      case '[' => parseArray()
-      case e => throw JSONSyntaxException(s"excepted ['[' , '{'] but '$e' at row $row,column $column")
-    }
-  }
-
-  private def parseObject(): JSONObject = {
-    var map = Map.empty[String, Any]
-    next() match {
-      case '}' => JSONObject(map)
-      case c =>
-        back(c)
-        map += parseItem()
-        next() match {
-          case ',' =>
-            back(',')
-            var ch = next()
-            while (ch == ',') {
-              map += parseItem()
-              ch = next()
-            }
-            ch match {
-              case '}' =>
-                JSONObject(map)
-              case e => throw JSONSyntaxException(s"excepted '}' but '$e' at row $row,column $column")
-            }
-          case '}' =>
-            JSONObject(map)
-          case e => throw JSONSyntaxException(s"excepted [',' , '}'] but '$e' at row $row,column $column")
-        }
-    }
-  }
-
-  private def parseArray(): JSONArray = {
-    var list = List.empty[Any]
-    next() match {
-      case ']' =>
-        JSONArray(list)
-      case ch =>
-        back(ch)
-        list = list :+ parseValue()
-        next() match {
-          case ',' =>
-            back(',')
-            var ch = next()
-            while (ch == ',') {
-              list = list :+ parseValue()
-              ch = next()
-            }
-            ch match {
-              case ']' =>
-                JSONArray(list)
-              case e => throw JSONSyntaxException(s"excepted ']' but '$e' at row $row,column $column")
-            }
-          case ']' =>
-            JSONArray(list)
-          case e => throw JSONSyntaxException(s"excepted [',' , ']'] but '$e' at row $row,column $column")
-        }
-    }
-  }
-
-  private def parseValue(): Any = {
-    next() match {
-      case '"' =>
-        back('"')
-        parseString()
-      case 't' =>
-        back('t')
-        parseTrue()
-      case 'f' =>
-        back('f')
-        parseFalse()
-      case 'n' =>
-        back('n')
-        parseNull()
-      case '{' =>
-        parseObject()
-      case '[' =>
-        parseArray()
-      case n if (n == '-' || (n >= '0' && n <= '9')) =>
-        back(n)
-        parseNumber()
-      case e => throw JSONSyntaxException(s"excepted [string , number , null , true , false , jsonObject , jsonArray] but '$e' at row $row,column $column")
-    }
-  }
-
-  private def parseItem(): (String, Any) = {
-    next() match {
-      case '"' =>
-        back('"')
-        val key = parseString()
-        next() match {
-          case ':' => (key, parseValue())
-          case e => throw JSONSyntaxException(s"excepted ':' but '$e' at row $row,column $column")
-        }
-      case e => throw JSONSyntaxException(s"excepted string but '$e' at row $row,column $column")
-    }
-  }
-
-  private def parseNull(): Any = {
-    nextChar() match {
-      case 'n' => nextChar() match {
-        case 'u' => nextChar() match {
-          case 'l' => nextChar() match {
-            case 'l' => null
-            case e => throw JSONLexerException(s"excepted null but '$e' at row $row,column $column")
-          }
-          case e => throw JSONLexerException(s"excepted null but $e at row $row,column $column")
-        }
-        case e => throw JSONLexerException(s"excepted null but $e at row $row,column $column")
-      }
-    }
-  }
-
-  private def parseFalse(): Boolean = {
-    nextChar() match {
-      case 'f' => nextChar() match {
-        case 'a' => nextChar() match {
-          case 'l' => nextChar() match {
-            case 's' => nextChar() match {
-              case 'e' => false
-              case e => throw JSONLexerException(s"excepted false but '$e' at row $row,column $column")
-            }
-            case e => throw JSONLexerException(s"excepted false but '$e' at row $row,column $column")
-          }
-          case e => throw JSONLexerException(s"excepted false but '$e' at row $row,column $column")
-        }
-        case e => throw JSONLexerException(s"excepted false but '$e' at row $row,column $column")
-      }
-    }
-  }
-
-  private def parseTrue(): Boolean = {
-    nextChar() match {
-      case 't' => nextChar() match {
-        case 'r' => nextChar() match {
-          case 'u' => nextChar() match {
-            case 'e' => true
-            case e => throw JSONLexerException(s"excepted true but '$e' at row $row,column $column")
-          }
-          case e => throw JSONLexerException(s"excepted true but '$e' at row $row,column $column")
-        }
-        case e => throw JSONLexerException(s"excepted true but '$e' at row $row,column $column")
-      }
-    }
-  }
-
-  private def parseString(): String = {
-    val sb: StringBuilder = new StringBuilder
-    nextChar()
-    var ch = nextChar()
-    while (ch != '"') {
-      ch match {
-        case '\\' =>
-          ch = nextChar()
-          ch match {
-            case '"' =>
-              sb.append('\"')
-              ch = nextChar()
-            case '\\' =>
-              sb.append('\\')
-              ch = nextChar()
-            case '/' =>
-              sb.append('/')
-              ch = nextChar()
-            case 'b' =>
-              sb.append('\b')
-              ch = nextChar()
-            case 'f' =>
-              sb.append('\f')
-              ch = nextChar()
-            case 'F' =>
-              sb.append('\f')
-              ch = nextChar()
-            case 'n' =>
-              sb.append('\n')
-              ch = nextChar()
-            case 'r' =>
-              sb.append('\r')
-              ch = nextChar()
-            case 't' =>
-              sb.append('\t')
-              ch = nextChar()
-            case 'u' =>
-              val u1 = nextChar()
-              val u2 = nextChar()
-              val u3 = nextChar()
-              val u4 = nextChar()
-              val s = Integer.valueOf(new String(Array(u1, u2, u3, u4)), 16).toChar
-              sb.append(s)
-              ch = nextChar()
-            case e =>
-              sb.append('\\')
-              sb.append(e)
-              ch = nextChar()
-          }
-        case e =>
-          sb.append(ch)
-          ch = nextChar()
-      }
-    }
-    sb.toString()
-  }
-
-  private def parseNumber(): AnyVal = {
-    val sb = new StringBuilder
-    var next = nextChar()
-    if (next == '-') {
-      sb.append('-')
-      next = nextChar()
-    }
-    next match {
-      case '0' =>
-        sb.append('0')
-        next = nextChar()
-      case ch if ch > '0' && ch <= '9' =>
-        sb.append(next)
-        next = nextChar()
-        while (parseDigit(next, sb)) {
-          next = nextChar()
-        }
-    }
-
-    if (next == '.' || next == 'e' || next == 'E') {
-      if (next == '.') {
-        sb.append(next)
-        next = nextChar()
-        while (parseDigit(next, sb)) {
-          next = nextChar()
-        }
-      }
-      if (next == 'e' || next == 'E') {
-        sb.append(next)
-        next = nextChar()
-        if (next == '+' || next == '-') {
-          sb.append(next)
-          next = nextChar()
-        }
-        while (parseDigit(next, sb)) {
-          next = nextChar()
-        }
-      }
-      back(next)
-      sb.toString.toDouble
-    } else {
-      back(next)
-      sb.toString.toLong match {
-        case value if value >= Int.MinValue && value <= Int.MaxValue => sb.toString.toInt
-        case value => value
-      }
-    }
-  }
-
-  private def parseDigit(c: Char, sb: StringBuilder): Boolean = {
-    c match {
-      case c if c >= '0' && c <= '9' =>
-        sb.append(c)
-        true
-      case e =>
-        false
-    }
-  }
-
-  private def nextChar(): Char = {
-    if (backBuffer.nonEmpty) {
-      column = backCharPosition.head._1
-      row = backCharPosition.head._2
-      backCharPosition = backCharPosition.tail
-      val c = backBuffer.head
-      backBuffer = backBuffer.tail
-      c
-    } else {
-      column += 1
-      if (it.hasNext) {
-        it.next()
-      } else {
-        throw JSONSyntaxException(s"excepted a char but stream ended at row $row,column $column")
-      }
-    }
-  }
-
-  private def next(): Char = {
-    if (backBuffer.nonEmpty) {
-      column = backCharPosition.head._1
-      row = backCharPosition.head._2
-      backCharPosition = backCharPosition.tail
-      val c = backBuffer.head
-      backBuffer = backBuffer.tail
-      c
-    } else {
-      if (it.hasNext) {
-        var c = it.next()
-        while (ignoreLetter(c)) {
-          if (it.hasNext) {
-            c = it.next()
-          } else {
-            throw JSONSyntaxException(s"excepted a char but stream ended at row $row,column $column")
-          }
-        }
-        column += 1
-        c
-      } else {
-        throw JSONSyntaxException(s"excepted a char but stream ended  at row $row,column $column")
-      }
-    }
-  }
-
-  private def ignoreLetter(c: Char): Boolean = {
-    c match {
-      case ' ' =>
-        column += 1
-        return true
-      case '\r' =>
-        column += 1
-        return true
-      case '\n' =>
-        row += 1
-        column = 0
-        return true
-      case '\t' =>
-        column += 4
-        return true
-      case _ => return false
-    }
-  }
-
-  private def back(char: Char): Unit = {
-    var c = char
-    while (ignoreLetter(c)) {
-      c = it.next()
-    }
-    column += 1
-    backBuffer = backBuffer :+ c
-    backCharPosition = backCharPosition :+(column, row)
-  }
-}
-
-object RuleType extends Enumeration {
-  type RuleType = Value
-  val NORMAL_TOKEN, PATH_TOKEN, CURRENT_PATH_TOKEN = Value
-}
-
 class JSONPointerParser(str: String) {
 
   private val it: Iterator[Char] = str.iterator
   private var backBuffer = List.empty[Char]
-  private var isPathToken = false
 
   def parsePath(): List[Rule] = {
     if (!hasNext()) {
@@ -509,90 +138,41 @@ class JSONPointerParser(str: String) {
             rules = rules :+ rule
           }
           rules
-        case '.' =>
-          if (hasNext()) {
-            var ch = next()
-            ch match {
-              case '.' =>
-                if (hasNext()) {
-                  ch = next()
-                  if (ch == '/') {
-                    back('/')
-                    isPathToken = true
-                    Rule("..", RuleType.PATH_TOKEN) +: parsePath()
-                  } else {
-                    throw JSONPointerSyntaxException(s"excepted '/' but '$ch'")
-                  }
-                } else {
-                  throw JSONPointerSyntaxException(s"EOF but parser wasn't finished")
-                }
-              case '/' =>
-                back('/')
-                Rule(".", RuleType.CURRENT_PATH_TOKEN) +: parsePath()
-              case e => throw JSONPointerSyntaxException(s"excepted ['/' or '.'] but '$e'")
-            }
-          } else {
-            throw JSONPointerSyntaxException(s"EOF but parser wasn't finished")
-          }
-        case e => throw JSONPointerSyntaxException(s"excepted ['/' or '.'] but '$e'")
+        case e => throw JSONPointerSyntaxException(s"excepted '/' but '$e'")
       }
     }
   }
 
   private def parseRule(): Rule = {
     if (!hasNext()) {
-      isPathToken = false
-      return Rule("", RuleType.NORMAL_TOKEN)
-    }
-    var ch = next()
-    if (ch == '/') {
-      isPathToken = false
-      back('/')
-      Rule("", RuleType.NORMAL_TOKEN)
-    } else if (ch == '.') {
-      val sb = new StringBuilder
-      sb.append(ch)
-      if (!hasNext()) {
-        isPathToken = false
-        Rule(sb.toString, RuleType.NORMAL_TOKEN)
-      } else {
-        ch = next()
-        if (ch == '.') {
-          sb.append(ch)
-          if (!hasNext()) {
-            isPathToken = false
-            Rule(sb.toString, RuleType.NORMAL_TOKEN)
+      Rule("")
+    } else {
+      var ch = next()
+      if (ch == '/') {
+        back('/')
+        Rule("")
+      } else if (ch == '*') {
+        if (hasNext()) {
+          ch = next()
+          if (ch == '/') {
+            back('/')
+            Rule("*", RuleType.WILDCARD)
           } else {
-            ch = next()
-            if (ch == '/') {
-              back('/')
-              if (!isPathToken) {
-                Rule(sb.toString, RuleType.NORMAL_TOKEN)
-              } else {
-                isPathToken = true
-                Rule(sb.toString, RuleType.PATH_TOKEN)
-              }
-            } else {
-              parseString(ch, sb)
-              isPathToken = false
-              Rule(sb.toString, RuleType.NORMAL_TOKEN)
-            }
+            back(ch)
+            parseString('*')
           }
         } else {
-          parseString(ch, sb)
-          isPathToken = false
-          Rule(sb.toString, RuleType.NORMAL_TOKEN)
+          Rule("*", RuleType.WILDCARD)
         }
+      } else {
+        parseString(ch)
       }
-    } else {
-      val sb = new StringBuilder
-      parseString(ch, sb)
-      isPathToken = false
-      Rule(sb.toString, RuleType.NORMAL_TOKEN)
     }
   }
 
-  private def parseString(ch: Char, sb: StringBuilder): Unit = {
+  private def parseString(ch: Char): Rule = {
+    var splits: List[String] = List.empty[String]
+    var sb: StringBuilder = new StringBuilder
     back(ch)
     var c: Char = 0
     while (hasNext() && {
@@ -606,8 +186,10 @@ class JSONPointerParser(str: String) {
             sb.append('~')
           } else if (c == '1') {
             sb.append('/')
-          } else if (c == '2') {
-            sb.append("..")
+          } else if (c == '*') {
+            sb.append('*')
+          } else if (c == ',') {
+            sb.append(',')
           } else {
             sb.append('~')
             sb.append(c)
@@ -615,6 +197,9 @@ class JSONPointerParser(str: String) {
         } else {
           sb.append('~')
         }
+      } else if (c == ',') {
+        splits = splits :+ sb.toString
+        sb = new StringBuilder
       } else {
         sb.append(c)
       }
@@ -623,6 +208,12 @@ class JSONPointerParser(str: String) {
     }
     if (c == '/') {
       back(c)
+    }
+    if (splits.nonEmpty) {
+      splits = splits :+ sb.toString
+      Rule(splits.mkString(","), RuleType.SPLIT, None, splits)
+    } else {
+      Rule(sb.toString)
     }
   }
 
@@ -646,129 +237,234 @@ class JSONPointerParser(str: String) {
 }
 
 class JSONPointer {
+  private type ArrayFilter = Int => Boolean
+  private type ObjectFilter = String => Boolean
+
   def this(str: String) {
     this()
-    json = JSONParser(str).parser()
+    json = Some(JSONParser(str).parser())
   }
 
-  private var json: JSONType = _
-  private var original = List.empty[Rule]
+  private var json: Option[JSONType] = None
 
   def read[T](path: String): T = {
-    require(json != null, "json is null")
-    var temp: Any = json
-    val rules = pathSolver(path)
-    rules.foreach(rule => temp = solver(rule, temp))
-    temp.asInstanceOf[T]
+    require(json != None, "json is None")
+    read[T](path, json.get, List.empty)
   }
 
   def read[T](path: String, json: String): T = {
-    read[T](path, JSONParser(json).parser())
+    read[T](path, JSONParser(json).parser(), List.empty)
   }
 
   def read[T](path: String, json: Iterator[Char]): T = {
-    read[T](path, JSONParser(json).parser())
+    read[T](path, JSONParser(json).parser(), List.empty)
   }
 
   def read[T](path: String, json: JSONType): T = {
-    var temp: Any = json
     val rules = JSONPointerParser(path).parsePath()
-    require(rules.find(_.ruleType == RuleType.PATH_TOKEN) == None, "can't allowed path token['..' or '.']")
+    read[T](merge(rules, List.empty), json)
+  }
+
+  def read[T](path: String, filters: List[Option[Any]]): T = {
+    require(json != None, "json is None")
+    read[T](path, json.get, filters)
+  }
+
+  def read[T](path: String, json: String, filters: List[Option[Any]]): T = {
+    read[T](path, JSONParser(json).parser(), filters)
+  }
+
+  def read[T](path: String, json: Iterator[Char], filters: List[Option[Any]]): T = {
+    read[T](path, JSONParser(json).parser(), filters)
+  }
+
+  def read[T](path: String, json: JSONType, filters: List[Option[Any]]): T = {
+    val rules = JSONPointerParser(path).parsePath()
+    read[T](merge(rules, filters), json)
+  }
+
+  private def read[T](path: List[Rule]): T = {
+    require(json != None, "json is None")
+    read[T](path, json.get)
+  }
+
+  private def read[T](path: List[Rule], json: String): T = {
+    read[T](path, JSONParser(json).parser())
+  }
+
+  private def read[T](path: List[Rule], json: Iterator[Char]): T = {
+    read[T](path, JSONParser(json).parser())
+  }
+
+  private def read[T](rules: List[Rule], json: JSONType): T = {
+    var temp: Any = json
     rules.foreach(rule => temp = solver(rule, temp))
     temp.asInstanceOf[T]
   }
 
+  def read[T](path: Path): T = {
+    read[T](path.build)
+  }
+
+  def read[T](path: Path, json: String): T = {
+    read[T](path.build, json)
+  }
+
+  def read[T](path: Path, json: Iterator[Char]): T = {
+    read[T](path.build, json)
+  }
+
+  def read[T](path: Path, json: JSONType): T = {
+    read[T](path.build, json)
+  }
+
   def reduceRead[T](path: String): T = {
-    reduce(read(path)).asInstanceOf[T]
+    reduce(read[T](path, List.empty)).asInstanceOf[T]
   }
 
   def reduceRead[T](path: String, json: String): T = {
-    reduceRead[T](path, JSONParser(json).parser())
+    reduceRead[T](path, JSONParser(json).parser(), List.empty)
   }
 
   def reduceRead[T](path: String, json: Iterator[Char]): T = {
-    reduceRead[T](path, JSONParser(json).parser())
+    reduceRead[T](path, JSONParser(json).parser(), List.empty)
   }
 
   def reduceRead[T](path: String, json: JSONType): T = {
+    reduce(read(path, json, List.empty)).asInstanceOf[T]
+  }
+
+  def reduceRead[T](path: String, filters: List[Option[Any]]): T = {
+    reduce(read[T](path, filters)).asInstanceOf[T]
+  }
+
+  def reduceRead[T](path: String, json: String, filters: List[Option[Any]]): T = {
+    reduceRead[T](path, JSONParser(json).parser(), filters)
+  }
+
+  def reduceRead[T](path: String, json: Iterator[Char], filters: List[Option[Any]]): T = {
+    reduceRead[T](path, JSONParser(json).parser(), filters)
+  }
+
+  def reduceRead[T](path: String, json: JSONType, filters: List[Option[Any]]): T = {
+    reduce(read(path, json, filters)).asInstanceOf[T]
+  }
+
+  private def reduceRead[T](path: List[Rule]): T = {
+    reduce(read(path)).asInstanceOf[T]
+  }
+
+  private def reduceRead[T](path: List[Rule], json: String): T = {
+    reduceRead[T](path, JSONParser(json).parser())
+  }
+
+  private def reduceRead[T](path: List[Rule], json: Iterator[Char]): T = {
+    reduceRead[T](path, JSONParser(json).parser())
+  }
+
+  private def reduceRead[T](path: List[Rule], json: JSONType): T = {
     reduce(read(path, json)).asInstanceOf[T]
+  }
+
+  def reduceRead[T](path: Path): T = {
+    reduceRead[T](path.build)
+  }
+
+  def reduceRead[T](path: Path, json: String): T = {
+    reduceRead[T](path.build, json)
+  }
+
+  def reduceRead[T](path: Path, json: Iterator[Char]): T = {
+    reduceRead[T](path.build, json)
+  }
+
+  def reduceRead[T](path: Path, json: JSONType): T = {
+    reduceRead[T](path.build, json)
+  }
+
+  private def merge(rules: List[Rule], list: List[Option[Any]]): List[Rule] = {
+    var temp = list
+    if (list.isEmpty) {
+      rules
+    } else {
+      rules.map(r => {
+        if (r.ruleType == RuleType.WILDCARD) {
+          val v = r.copy(filter = temp.head)
+          temp = temp.tail
+          v
+        } else {
+          r
+        }
+      })
+    }
   }
 
   private def reduce(obj: Any): Any = {
     obj match {
       case list: List[_] =>
-        val rs = list.filter(_ != NotFound).map(reduce(_))
-        rs.size match {
-          case 1 => rs(0)
-          case _ => rs
+        val result = list.filter(e => e != NotFound && e != List.empty).map(reduce(_))
+        result.size match {
+          case 1 => result(0)
+          case 0 => NotFound
+          case _ => result
         }
       case obj => obj
-    }
-  }
-
-  private def pathSolver(path: String): List[Rule] = {
-    var rules = JSONPointerParser(path).parsePath()
-    rules match {
-      case Rule(rule: String, ruleType: RuleType) :: tail =>
-        ruleType match {
-          case RuleType.CURRENT_PATH_TOKEN => rules = original ::: tail
-          case RuleType.PATH_TOKEN => rules = detectPath(original, rules)
-          case RuleType.NORMAL_TOKEN => original = rules
-        }
-      case Nil =>
-    }
-    rules
-  }
-
-  private def detectPath(original: List[Rule], current: List[Rule]): List[Rule] = {
-    current match {
-      case Rule(rule: String, ruleType: RuleType) :: tail => ruleType match {
-        case RuleType.PATH_TOKEN => detectPath(original.reverse.tail.reverse, tail)
-        case e => original ::: current
-      }
-      case Nil => original
     }
   }
 
   private def solver(rule: Rule, temp: Any): Any = {
     temp match {
       case jsonAry: JSONArray =>
-        rule.rule match {
-          case str: String =>
-            val arySize = jsonAry.list.size
+        val arySize = jsonAry.list.size
+        rule.ruleType match {
+          case RuleType.TOKEN =>
+            val str = rule.rule
             if (str.indexOf(':') >= 0) {
               val from: Int = parseArrayIndex(str.substring(0, str.indexOf(":")), arySize, 0)
               val until = parseArrayIndex(str.substring(str.indexOf(":") + 1), arySize, arySize - 1)
               if (from > until) jsonAry.list.slice(until, from + 1).reverse else jsonAry.list.slice(from, until + 1)
-            } else if (str.indexOf(',') >= 0) {
-              val ary = str.split(",")
-              if (ary.length < 2) {
-                val size = ary.length
-                throw JSONPointerException(s"excepted >=2 numbers but size is $size", null)
-              }
-
-              ary.map(e => {
-                jsonAry.list(parseArrayIndex(e, arySize, throw JSONPointerException(s"excepted a number but '$e'", null)))
-              }).toList
-
-            } else if (str.trim == "*") {
-              jsonAry.list
             } else {
-              jsonAry.list(parseArrayIndex(str, arySize, throw JSONPointerException(s"excepted a number but '$str'", null)))
+              jsonAry.list(parseArrayIndex(str, arySize, throw JSONPointerException(s"excepted a number but '$str'")))
+            }
+          case RuleType.SPLIT =>
+            rule.splits.map(e => {
+              jsonAry.list(parseArrayIndex(e, arySize, throw JSONPointerException(s"excepted a number but '$e'")))
+            })
+          case RuleType.WILDCARD =>
+            rule.filter match {
+              case Some(f) =>
+                try {
+                  (0 until arySize).filter(f.asInstanceOf[Int => Boolean](_)).map(jsonAry.list(_)).toList
+                } catch {
+                  case e: ClassCastException =>
+                    try {
+                      (0 until arySize).filter(f.asInstanceOf[(Int, Int) => Boolean](_, arySize)).map(jsonAry.list(_)).toList
+                    } catch {
+                      case e: ClassCastException => NotFound
+                    }
+                }
+              case None => jsonAry.list
+              case _ => NotFound
             }
         }
       case jsonObj: JSONObject =>
-        rule.rule match {
-          case str: String => jsonObj.map.getOrElse(str, {
-            if (str.indexOf(",") >= 0) {
-              val keys = str.split(",").toList
-              keys.map(jsonObj.map.getOrElse(_, NotFound))
-            } else if (str.trim == "*") {
-              jsonObj.map.values.toList
-            } else {
-              NotFound
+        rule.ruleType match {
+          case RuleType.TOKEN =>
+            val str = rule.rule
+            jsonObj.map.getOrElse(str, NotFound)
+          case RuleType.SPLIT =>
+            rule.splits.map(jsonObj.map.getOrElse(_, NotFound))
+          case RuleType.WILDCARD =>
+            rule.filter match {
+              case Some(f) =>
+                try {
+                  jsonObj.map.keys.filter(f.asInstanceOf[String => Boolean](_)).map(jsonObj.map(_)).toList
+                } catch {
+                  case e: ClassCastException => NotFound
+                }
+              case None => jsonObj.map.values.toList
+              case _ => NotFound
             }
-          })
         }
       case list: List[_] => list.map(solver(rule, _))
       case _ => NotFound
@@ -801,7 +497,7 @@ class JSONPointer {
         case v => v
       }
       if (value < 0 || value >= size) {
-        throw JSONPointerException(s"out of range,array size is $size", null)
+        throw JSONPointerException(s"out of range,array size is $size")
       } else {
         value
       }
@@ -817,7 +513,7 @@ class JSONPointer {
         if (hasNext) {
           next = nextChar()
         } else {
-          throw JSONPointerException(s"excepted a number but '$str'", null)
+          throw JSONPointerException(s"excepted a number but '$str'")
         }
       }
       next match {
@@ -826,7 +522,7 @@ class JSONPointer {
           if (!hasNext) {
             0
           } else {
-            throw JSONPointerException(s"excepted a number but '$str'", null)
+            throw JSONPointerException(s"excepted a number but '$str'")
           }
 
         case ch if ch > '0' && ch <= '9' =>
@@ -841,13 +537,107 @@ class JSONPointer {
               }
             }
             if (next < '0' || next > '9') {
-              throw JSONPointerException(s"excepted a number but '$str'", null)
+              throw JSONPointerException(s"excepted a number but '$str'")
             }
           }
           str2int(sb.toString(), size)
 
-        case _ => throw JSONPointerException(s"excepted a number but '$str'", null)
+        case _ => throw JSONPointerException(s"excepted a number but '$str'")
       }
     }
   }
 }
+
+class Path() {
+
+  type Wildcard = () => *
+
+  import Path._
+
+  var path: List[Rule] = List.empty[Rule]
+
+  def /(args: String*): Path = {
+    if (args.size > 1) {
+      path = path :+ Rule(args.mkString(","), RuleType.SPLIT, None, args.toList)
+    } else {
+      path = path :+ Rule(args.mkString(","))
+    }
+    this
+  }
+
+  def /(args: Int*)(implicit d: DummyImplicit): Path = {
+    if (args.size > 1) {
+      path = path :+ Rule(args.mkString(","), RuleType.SPLIT, None, args.map(_.toString).toList)
+    } else {
+      path = path :+ Rule(args.mkString(","))
+    }
+    this
+  }
+
+  def /(arg: (Int, Int)): Path = {
+    path = path :+ Rule(arg._1 + ":" + arg._2)
+    this
+  }
+
+  def /(wildcard: Wildcard): Path = {
+    path = path :+ Rule("*", RuleType.WILDCARD)
+    this
+  }
+
+  def /(wildcard: Wildcard, f: String => Boolean): Path = {
+    path = path :+ Rule("*", RuleType.WILDCARD, Some(f))
+    this
+  }
+
+  def /(wildcard: => Wildcard, f: Int => Boolean)(implicit d: DummyImplicit): Path = {
+    path = path :+ Rule("*", RuleType.WILDCARD, Some(f))
+    this
+  }
+
+  def /(wildcard: => Wildcard, f: (Int, Int) => Boolean)(implicit d: DummyImplicit): Path = {
+    path = path :+ Rule("*", RuleType.WILDCARD, Some(f))
+    this
+  }
+
+  def +(that: Path): Path = {
+    path = path ::: that.path
+    this
+  }
+
+  def build(): List[Rule] = {
+    val rs = path
+    path = List.empty[Rule]
+    rs
+  }
+
+  override def toString(): String = {
+    path.map(e => if (e.ruleType == RuleType.TOKEN) quote(e.rule) else e.rule).mkString("/", "/", "")
+  }
+}
+
+object Path {
+  def quote(str: String): String = {
+    val it: Iterator[Char] = str.iterator
+    val sb: StringBuilder = new StringBuilder
+    while (it.hasNext) {
+      it.next() match {
+        case '~' =>
+          sb.append('~')
+          sb.append('0')
+        case '/' =>
+          sb.append('~')
+          sb.append('1')
+        case ',' =>
+          sb.append('~')
+          sb.append(',')
+        case '*' =>
+          sb.append('~')
+          sb.append('*')
+        case ch => sb.append(ch)
+      }
+    }
+    sb.toString()
+  }
+}
+
+case class *()

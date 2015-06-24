@@ -32,12 +32,12 @@ object JSONSyntaxException {
 }
 
 @SerialVersionUID(1L)
-class JSONPointerException protected(message: String, cause: Throwable) extends RuntimeException(message: String, cause: Throwable) {
+class JSONPointerException protected(message: String) extends RuntimeException(message: String) {
 
 }
 
 object JSONPointerException {
-  def apply(message: String, cause: Throwable): JSONPointerException = new JSONPointerException(message, cause)
+  def apply(message: String): JSONPointerException = new JSONPointerException(message)
 }
 
 @SerialVersionUID(1L)
