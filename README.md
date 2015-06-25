@@ -108,8 +108,8 @@ assert(value4 === List(JSONArray(List(true, false, null)), JSONObject(Map("abc" 
 |  ``,``      | ``~,``                         | ``/foo,bar``=>``/foo~,bar`` |
 |  ``*``      | ``~*``                         | ``/store/*``=>``/store/~*`  |
 
-You can use these rule to escape character manual.or you can use helper method `quote` to do these things.
-for example:
+You can use these rule to escape character manual.or you can use helper method `quote` to do these things.  
+For example:
 ```scala
 import Path._
 val path = s"/*/${quote("*")}/${quote("abc,bcd")}"
@@ -124,22 +124,24 @@ val path = new Path / * / "*" / "abc,bcd"
 This `path` will compile to string `/*/~*/abc~,bcd`
 
 ##Filters
-Filters can only used on wildcard(`*`) keywords.as you can see above.
-We provied three filters.two of them used on `JSONArray`.another one used on `JSONObject`
-`JSONArray`: `Int=>Boolean` and `(Int,Int)=>Boolean`
-`JSONObject`: `String=>Boolean`
 
-`Int=>Boolean` :`Int` represents `JSONArray` index.if result is `true` this index of `JSONArray` will return.
-`(Int,Int)=>Boolean` : first `Int` represents `JSONArray` index.and second `Int` represents `JSONArray`'s size.
-`String=>Boolean` : `String` represents `JSONObject`'s key.
+Filters can only used on wildcard(`*`) keywords.as you can see above.  
+We provied three filters.two of them used on `JSONArray`.another one used on `JSONObject`  
+`JSONArray`: `Int=>Boolean` and `(Int,Int)=>Boolean`  
+`JSONObject`: `String=>Boolean`  
+
+`Int=>Boolean` :`Int` represents `JSONArray` index.if result is `true` this index of `JSONArray` will return.  
+`(Int,Int)=>Boolean` : first `Int` represents `JSONArray` index.and second `Int` represents `JSONArray`'s size.  
+`String=>Boolean` : `String` represents `JSONObject`'s key.  
 
 ###string path parser
 ```scala
 JSONPointer().reduceRead[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
 ```
-You **MUST** add two filters to the path above.because this path contains two wildcards.
-firse filter is `None`.represents filter all things.
-second filter is `Some((e: String) => e.contains("b"))`.represents filter that `key` contains string `"b"`.
+You **MUST** add two filters to the path above.because this path contains two wildcards.  
+Firse filter is `None`.represents filter all things.  
+Second filter is `Some((e: String) => e.contains("b"))`.represents filter that `key` contains string `"b"`.  
+
 ###scala DSL
 ```scala
 new Path / * /(*, (e: String) => e.contains("b"))
