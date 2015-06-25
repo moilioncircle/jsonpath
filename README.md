@@ -3,26 +3,26 @@
 [![Build Status](https://travis-ci.org/leonchen83/jsonpath.svg?branch=master)](https://travis-ci.org/leonchen83/jsonpath)
 [![Coverage Status](https://coveralls.io/repos/leonchen83/jsonpath/badge.svg?branch=master)](https://coveralls.io/r/leonchen83/jsonpath?branch=master)
 
-This is an implementation of JSON pointer[(RFC 6901)](http://tools.ietf.org/html/rfc6901) in Scala which extend 
-JSON pointer syntax(add another three keywords `:`,`,`,`*`).
+This is an implementation of JSON pointer[(RFC 6901)](http://tools.ietf.org/html/rfc6901) in Scala which extends 
+JSON pointer syntax(add another three keywords `:` `,` `*`).
 This library support 2 ways to access JSON notation data. `string path parser` and `scala DSL`
 
 ##Syntax
 
-###string path parser
+###string path parser:
 
 Here is a list of supported operators : 
 
 | *Operator* | *Description*                  | *Example*                     |
 | ---------- | ------------------------------ | ----------------------------- |
-| ``/``      | path split keywords            | ``/foo``                      |
+| ``/``      | path split                     | ``/foo``                      |
 | ``:``      | array slice(python like)       | ``/-1:-3``(last 3 elements)   |
 | ``,``      | collection of names or indices | ``/foo,bar``                  |
 | ``*``      | wildcard                       | ``/store/book/*``             |
 
-Code example
+Code example:
 ``` scala
-    val json =
+val json =
       """
         |[
         |    [
@@ -45,19 +45,19 @@ Code example
         |]
       """.stripMargin
       
-     val value6 = JSONPointer().reduceRead[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
-    assert(value6 === List(List(1.233E-10, true, null), List(true, 1.23)))
+val value6 = JSONPointer().reduceRead[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
+assert(value6 === List(List(1.233E-10, true, null), List(true, 1.23)))
 
-    val value7 = JSONPointer().reduceRead[Any]("/-3/1", json)
-    assert(value7 === NotFound)
+val value7 = JSONPointer().reduceRead[Any]("/-3/1", json)
+assert(value7 === NotFound)
 ```
 
-###scala DSL
+###scala DSL:
 
-Code example
+Code example:
 
 ``` scala
-    val json =
+val json =
       """
         |[
         |    [
@@ -80,24 +80,26 @@ Code example
         |]
       """.stripMargin
 
-    val value0 = JSONPointer().read[List[Any]](new Path / -3 /("bcd", ""), json)
-    assert(value0 === List(true, 1.233E-10))
+val value0 = JSONPointer().read[List[Any]](new Path / -3 /("bcd", ""), json)
+assert(value0 === List(true, 1.233E-10))
 
-    val value1 = JSONPointer().reduceRead[List[Any]](new Path / * /(*, (e: String) => e.contains("b")), json)
-    assert(value1 === List(List(1.233E-10, true, null), List(true, 1.23)))
+val value1 = JSONPointer().reduceRead[List[Any]](new Path / * /(*, (e: String) => e.contains("b")), json)
+assert(value1 === List(List(1.233E-10, true, null), List(true, 1.23)))
 
-    val value2 = JSONPointer().reduceRead[Any](new Path / (1 -> -1) /(*, (_: String) == "b"), json)
-    assert(value2 === List(null, 1.23))
+val value2 = JSONPointer().reduceRead[Any](new Path / (1 -> -1) /(*, (_: String) == "b"), json)
+assert(value2 === List(null, 1.23))
     
-    val value3 = JSONPointer().read[Boolean](new Path / -3 /"bcd", json)
-    assert(value3 === true)
+val value3 = JSONPointer().read[Boolean](new Path / -3 /"bcd", json)
+assert(value3 === true)
     
-    val value4 = JSONPointer().reduceRead[List[Any]](new Path /(*, _ < _ -1), json)
-    assert(value4 === List(JSONArray(List(true, false, null)), JSONObject(Map("abc" -> 1.233E-10, "bcd" -> true, "b" -> null)),JSONObject(Map( ""-> 1.233E-10, "bcd" -> true, "b" -> 1.23)), false))
+val value4 = JSONPointer().reduceRead[List[Any]](new Path /(*, _ < _ -1), json)
+assert(value4 === List(JSONArray(List(true, false, null)), JSONObject(Map("abc" -> 1.233E-10, "bcd" -> true, "b" -> null)),JSONObject(Map( ""-> 1.233E-10, "bcd" -> true, "b" -> 1.23)), false))
 
 ```
 
-##escape
+##Escape
+
+###string path parser:
 
 | *Operator* | *Escape*                       | *Example*                   |
 | ---------- | ------------------------------ | --------------------------- |
@@ -106,7 +108,45 @@ Code example
 |  ``,``     | ``~,``                         | ``/foo,bar``=>``/foo~,bar`` |
 |  ``*``     | ``~*``                         | ``/store/*``=>``/store/~*`  |
 
-## more examples
+You can use these rule to escape char manual.or you can use helper method `quote` to do these things.
+for example:
+```scala
+import Path._
+val path = s"/*/${quote("*")}/${quote("abc,bcd")}"
+```
+###scala DSL:
+
+When you are using `scala DSL`.you don't need escape any char.
+for example 
+```scala
+val path = new Path / * / "*" / "abc,bcd"
+```
+This `path` will compile to string `/*/~*/abc~,bcd`
+
+##Filters
+Filters can only used on wildcard(`*`) keywords.as you can see above.
+We provied three filters.two of them used on `JSONArray`.another one used on `JSONObject`
+`JSONArray`: `Int=>Boolean` and `(Int,Int)=>Boolean`
+`JSONObject`: `String=>Boolean`
+
+`Int=>Boolean` :`Int` represents `JSONArray` index.if result is `true` this index of `JSONArray` will return.
+`(Int,Int)=>Boolean` : first `Int` represents `JSONArray` index.and second `Int` represents `JSONArray`'s size.
+`String=>Boolean` : `String` represents `JSONObject`'s key.
+
+###string path parser
+```scala
+JSONPointer().reduceRead[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
+```
+You **MUST** add two filters to the path above.because this path contains two wildcards.
+firse filter is `None`.represents filter all things.
+second filter is `Some((e: String) => e.contains("b"))`.represents filter that `key` contains string `"b"`.
+###scala DSL
+```scala
+new Path / * /(*, (e: String) => e.contains("b"))
+```
+You don't need add a filter on first `*`.because with default filter is `None`.
+
+## More examples
 
   * `/store/book/0/author` get first book author  
   * `/store/book/0,2/author` get 1,3 book author
@@ -159,7 +199,7 @@ Code example
 }
 ```
 
-## special examples
+##Special examples
 
 ``` json
 {
@@ -196,7 +236,7 @@ Code example
 `/0:2`   |10
 `/~*`    |11
 
-## references
+##References
 
   * [JSON Pointer (RFC 6901)](http://tools.ietf.org/html/rfc6901)
   * [JSON (JavaScript Object Notation)](http://json.org/)
