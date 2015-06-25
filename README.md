@@ -9,7 +9,7 @@ This library support 2 ways to access JSON notation data. `string path parser` a
 
 ##Syntax
 
-###string path parser:
+####string path parser:
 
 Here is a list of supported operators : 
 
@@ -52,7 +52,7 @@ val value7 = JSONPointer().reduceRead[Any]("/-3/1", json)
 assert(value7 === NotFound)
 ```
 
-###scala DSL:
+####scala DSL:
 
 Code example:
 
@@ -99,7 +99,7 @@ assert(value4 === List(JSONArray(List(true, false, null)), JSONObject(Map("abc" 
 
 ##Escape
 
-###string path parser:
+####string path parser:
 
 | *Character* | *Escape*                       | *Example*                   |
 | ----------- | ------------------------------ | --------------------------- |
@@ -114,7 +114,7 @@ For example:
 import Path._
 val path = s"/*/${quote("*")}/${quote("abc,bcd")}"
 ```
-###scala DSL:
+####scala DSL:
 
 When you are using `scala DSL`.you don't need escape any character.
 for example 
@@ -134,7 +134,7 @@ We provied three filters.two of them used on `JSONArray`.another one used on `JS
 `(Int,Int)=>Boolean` : first `Int` represents `JSONArray` index.and second `Int` represents `JSONArray`'s size.  
 `String=>Boolean` : `String` represents `JSONObject`'s key.  
 
-###string path parser
+####string path parser
 ```scala
 JSONPointer().reduceRead[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
 ```
@@ -142,7 +142,7 @@ You **MUST** add two filters to the path above.because this path contains two wi
 Firse filter is `None`.represents filter all things.  
 Second filter is `Some((e: String) => e.contains("b"))`.represents filter that `key` contains string `"b"`.  
 
-###scala DSL
+####scala DSL
 ```scala
 new Path / * /(*, (e: String) => e.contains("b"))
 ```
