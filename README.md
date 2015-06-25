@@ -13,12 +13,12 @@ This library support 2 ways to access JSON notation data. `string path parser` a
 
 Here is a list of supported operators : 
 
-| *Operator* | *Description*                  | *Example*                     |
-| ---------- | ------------------------------ | ----------------------------- |
-| ``/``      | path split                     | ``/foo``                      |
-| ``:``      | array slice(python like)       | ``/-1:-3``(last 3 elements)   |
-| ``,``      | collection of names or indices | ``/foo,bar``                  |
-| ``*``      | wildcard                       | ``/store/book/*``             |
+| *Operator* | *Description*                  | *Example*                       |
+| ---------- | ------------------------------ | ------------------------------- |
+| ``/``      | path split                     | ``/foo``                        |
+| ``:``      | array slice(python like)       | ``/-1:-3``(last 3 elements)     |
+| ``,``      | collection of names or indices | ``/foo,bar`` or ``/foo/1,-1,2`` |
+| ``*``      | wildcard                       | ``/store/book/*``               |
 
 Code example:
 ``` scala
