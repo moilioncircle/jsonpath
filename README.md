@@ -12,11 +12,13 @@ This library support 2 ways to access JSON notation data. `string path parser` a
 ###string path parser
 
 Here is a list of supported operators : 
-|| *Operator*           || *Description*                  || *Example*                                   ||
-|| ``/``                || path split keywords            || ``/foo``                                    ||
-|| ``:``                || array slice(python like)       || ``/-1:-3``(last 3 elements)                 ||
-|| ``,``                || collection of names or indices || ``/foo,bar``                                ||
-|| ``*``                || wildcard                       || ``/store/book/*``                           ||
+
+| *Operator* | *Description*                  | *Example*                     |
+| ---------- | ------------------------------ | ----------------------------- |
+| ``/``      | path split keywords            | ``/foo``                      |
+| ``:``      | array slice(python like)       | ``/-1:-3``(last 3 elements)   |
+| ``,``      | collection of names or indices | ``/foo,bar``                  |
+| ``*``      | wildcard                       | ``/store/book/*``             |
 
 Code example
 ``` scala
@@ -97,11 +99,12 @@ Code example
 
 ##escape
 
-|| *Operator*           || *Escape*                       || *Example*                                   ||
-|| ``~``                || ``~0`` (RFC6901 compatibility) || ``/~``=>``/~0``                             ||
-|| ``/``                || ``~1`` (RFC6901 compatibility) || ``/a/b``=> ``/a~1b``                        ||
-|| ``,``                || ``~,``                         || ``/foo,bar``=>``/foo~,bar``                 ||
-|| ``*``                || ``~*``                         || ``/store/*``=>``/store/~*`                  ||
+| *Operator* | *Escape*                       | *Example*                   |
+| ---------- | ------------------------------ | --------------------------- |
+|  ``~``     | ``~0`` (RFC6901 compatibility) | ``/~``=>``/~0``             |
+|  ``/``     | ``~1`` (RFC6901 compatibility) | ``/a/b``=> ``/a~1b``        |
+|  ``,``     | ``~,``                         | ``/foo,bar``=>``/foo~,bar`` |
+|  ``*``     | ``~*``                         | ``/store/*``=>``/store/~*`  |
 
 ## more examples
 
@@ -156,7 +159,7 @@ Code example
 }
 ```
 
-## special example
+## special examples
 
 ``` json
 {
@@ -189,9 +192,9 @@ Code example
 `/k\"l`  |6
 `/ `     |7
 `/m~0n`  |8
-`/0,2`   |9
+`/0~,2`  |9
 `/0:2`   |10
-`/*`     |11
+`/~*`    |11
 
 ## references
 
