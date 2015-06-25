@@ -101,14 +101,14 @@ assert(value4 === List(JSONArray(List(true, false, null)), JSONObject(Map("abc" 
 
 ###string path parser:
 
-| *Operator* | *Escape*                       | *Example*                   |
-| ---------- | ------------------------------ | --------------------------- |
-|  ``~``     | ``~0`` (RFC6901 compatibility) | ``/~``=>``/~0``             |
-|  ``/``     | ``~1`` (RFC6901 compatibility) | ``/a/b``=> ``/a~1b``        |
-|  ``,``     | ``~,``                         | ``/foo,bar``=>``/foo~,bar`` |
-|  ``*``     | ``~*``                         | ``/store/*``=>``/store/~*`  |
+| *Character* | *Escape*                       | *Example*                   |
+| ----------- | ------------------------------ | --------------------------- |
+|  ``~``      | ``~0`` (RFC6901 compatibility) | ``/~``=>``/~0``             |
+|  ``/``      | ``~1`` (RFC6901 compatibility) | ``/a/b``=> ``/a~1b``        |
+|  ``,``      | ``~,``                         | ``/foo,bar``=>``/foo~,bar`` |
+|  ``*``      | ``~*``                         | ``/store/*``=>``/store/~*`  |
 
-You can use these rule to escape char manual.or you can use helper method `quote` to do these things.
+You can use these rule to escape character manual.or you can use helper method `quote` to do these things.
 for example:
 ```scala
 import Path._
@@ -116,7 +116,7 @@ val path = s"/*/${quote("*")}/${quote("abc,bcd")}"
 ```
 ###scala DSL:
 
-When you are using `scala DSL`.you don't need escape any char.
+When you are using `scala DSL`.you don't need escape any character.
 for example 
 ```scala
 val path = new Path / * / "*" / "abc,bcd"
