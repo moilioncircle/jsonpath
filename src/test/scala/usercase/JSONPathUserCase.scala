@@ -71,6 +71,5 @@ class JSONPathUserCase extends FunSuite {
 
     val value7 = JSONPointer().reduceRead[Any]("/-3/1", json)
     assert(value7 === NotFound)
-
   }
 }

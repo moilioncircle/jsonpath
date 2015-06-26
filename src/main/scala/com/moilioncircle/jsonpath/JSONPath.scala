@@ -15,12 +15,10 @@
  */
 package com.moilioncircle.jsonpath
 
-import com.moilioncircle.jsonpath.RuleType.RuleType
-
 /**
  *
  * An implementation of RFC6901.
- * Provide a convenient way to access json object using the path which like file path.
+ * Provide a convenient way to access json notation data using the path which like file path.
  *
  * ===RFC6901 example===
  * @example
@@ -95,32 +93,189 @@ import com.moilioncircle.jsonpath.RuleType.RuleType
  * }}}
  *
  * @author leon.chen
- * @version 0.0.1
+ * @version 0.2.1
  * @since   1.0.0
  * @see [[http://tools.ietf.org/html/rfc6901 "JSON Pointer (RFC 6901)"]]
  * @see [[http://json.org "JSON (JavaScript Object Notation)"]]
  *
  */
-sealed case class Rule(rule: String, ruleType: RuleType = RuleType.TOKEN, filter: Option[Any] = None, splits: List[String] = List.empty[String])
+import com.moilioncircle.jsonpath.RuleType.RuleType
 
-object RuleType extends Enumeration {
-  type RuleType = Value
-  val TOKEN, WILDCARD, SPLIT = Value
+/**
+ * scala DSL Wildcard
+ */
+case class *()
+
+/**
+ * scala DSL Path
+ */
+class Path() {
+
+  private[moilioncircle] type Wildcard = () => *
+
+  import Path._
+
+  private[moilioncircle] var path: List[Rule] = List.empty[Rule]
+
+  /**
+   * @param args one or multiply JSONObject keys.{{{new Path / "foo"}}}{{{new Path /("foo","bar")}}}
+   * @return scala DSL Path.
+   */
+  def /(args: String*): Path = {
+    if (args.size > 1) {
+      path = path :+ Rule(args.mkString(","), RuleType.SPLIT, None, args.toList)
+    } else {
+      path = path :+ Rule(args.mkString(","))
+    }
+    this
+  }
+  /**
+   *
+   * @param args one or more JSONArray indices.{{{new Path / 1}}}{{{new Path /(1,-1,5)}}}
+   * @param d **HACK** to avoid scala multiply overload method error.
+   * @return scala DSL Path.
+   */
+  def /(args: Int*)(implicit d: DummyImplicit): Path = {
+    if (args.size > 1) {
+      path = path :+ Rule(args.mkString(","), RuleType.SPLIT, None, args.map(_.toString).toList)
+    } else {
+      path = path :+ Rule(args.mkString(","))
+    }
+    this
+  }
+
+  /**
+   * @param arg JSONArray slice.{{{new Path / (1->5)}}}
+   * @return scala DSL Path.
+   */
+  def /(arg: (Int, Int)): Path = {
+    path = path :+ Rule(arg._1 + ":" + arg._2)
+    this
+  }
+
+  /**
+   * @param wildcard match all JSONArray or JSONObject.{{{new Path / *}}}
+   * @return scala DSL Path.
+   */
+  def /(wildcard: Wildcard): Path = {
+    path = path :+ Rule("*", RuleType.WILDCARD)
+    this
+  }
+
+  /**
+   * @param wildcard match all JSONArray or JSONObject.{{{new Path / (*,(key:String)=>key.contains("foo"))}}}
+   * @param f filter JSONObject via key.
+   * @return scala DSL Path.
+   */
+  def /(wildcard: Wildcard, f: String => Boolean): Path = {
+    path = path :+ Rule("*", RuleType.WILDCARD, Some(f))
+    this
+  }
+
+  /**
+   * @param wildcard match all JSONArray or JSONArray.{{{new Path / (*,(index:Int)=>index == 5)}}}
+   * @param f filter JSONObject via index.
+   * @param d **HACK** to avoid scala multiply overload method error.
+   * @return scala DSL Path.
+   */
+  def /(wildcard: => Wildcard, f: Int => Boolean)(implicit d: DummyImplicit): Path = {
+    path = path :+ Rule("*", RuleType.WILDCARD, Some(f))
+    this
+  }
+
+  /**
+   * @param wildcard match all JSONArray or JSONArray.{{{new Path / (*,(index:Int,length:Int)=>index < length)}}}
+   * @param f filter JSONObject via index,second param represents JSONArray length.
+   * @param d **HACK** to avoid scala multiply overload method error.
+   * @return scala DSL Path.
+   */
+  def /(wildcard: => Wildcard, f: (Int, Int) => Boolean)(implicit d: DummyImplicit): Path = {
+    path = path :+ Rule("*", RuleType.WILDCARD, Some(f))
+    this
+  }
+
+  /**
+   * @param that add that path to this path
+   * @return scala DSL Path.
+   */
+  def +(that: Path): Path = {
+    path = path ::: that.path
+    this
+  }
+
+  private[moilioncircle] def build(): List[Rule] = {
+    val rs = path
+    path = List.empty[Rule]
+    rs
+  }
+
+  /**
+   * @return path string used by DEBUG
+   */
+  override def toString(): String = {
+    path.map(e => if (e.ruleType == RuleType.TOKEN) quote(e.rule) else e.rule).mkString("/", "/", "")
+  }
 }
 
+/**
+ * NotFound
+ */
 case object NotFound
 
-object JSONPointerParser {
-  def apply(str: String): JSONPointerParser = new JSONPointerParser(str)
+/**
+ * help method used by string path parser.
+ */
+object Path {
+
+  /**
+   * @param str unquote str {{{quote("foo,bar")}}}
+   * @return quoted str {{{"foo~,bar"}}}
+   */
+  def quote(str: String): String = {
+    val it: Iterator[Char] = str.iterator
+    val sb: StringBuilder = new StringBuilder
+    while (it.hasNext) {
+      it.next() match {
+        case '~' =>
+          sb.append('~')
+          sb.append('0')
+        case '/' =>
+          sb.append('~')
+          sb.append('1')
+        case ',' =>
+          sb.append('~')
+          sb.append(',')
+        case '*' =>
+          sb.append('~')
+          sb.append('*')
+        case ch => sb.append(ch)
+      }
+    }
+    sb.toString()
+  }
 }
 
+/**
+ * JSON Pointer implementation
+ */
 object JSONPointer {
   def apply(json: String): JSONPointer = new JSONPointer(json)
 
   def apply(): JSONPointer = new JSONPointer
 }
 
-class JSONPointerParser(str: String) {
+private[moilioncircle] case class Rule(rule: String, ruleType: RuleType = RuleType.TOKEN, filter: Option[Any] = None, splits: List[String] = List.empty[String])
+
+private[moilioncircle] object RuleType extends Enumeration {
+  type RuleType = Value
+  val TOKEN, WILDCARD, SPLIT = Value
+}
+
+private[moilioncircle] object JSONPointerParser {
+  def apply(str: String): JSONPointerParser = new JSONPointerParser(str)
+}
+
+private[moilioncircle] class JSONPointerParser(str: String) {
 
   private val it: Iterator[Char] = str.iterator
   private var backBuffer = List.empty[Char]
@@ -236,7 +391,7 @@ class JSONPointerParser(str: String) {
   }
 }
 
-class JSONPointer {
+private[moilioncircle] class JSONPointer {
   private type ArrayFilter = Int => Boolean
   private type ObjectFilter = String => Boolean
 
@@ -281,25 +436,6 @@ class JSONPointer {
   def read[T](path: String, json: JSONType, filters: List[Option[Any]]): T = {
     val rules = JSONPointerParser(path).parsePath()
     read[T](merge(rules, filters), json)
-  }
-
-  private def read[T](path: List[Rule]): T = {
-    require(json != None, "json is None")
-    read[T](path, json.get)
-  }
-
-  private def read[T](path: List[Rule], json: String): T = {
-    read[T](path, JSONParser(json).parser())
-  }
-
-  private def read[T](path: List[Rule], json: Iterator[Char]): T = {
-    read[T](path, JSONParser(json).parser())
-  }
-
-  private def read[T](rules: List[Rule], json: JSONType): T = {
-    var temp: Any = json
-    rules.foreach(rule => temp = solver(rule, temp))
-    temp.asInstanceOf[T]
   }
 
   def read[T](path: Path): T = {
@@ -350,22 +486,6 @@ class JSONPointer {
     reduce(read(path, json, filters)).asInstanceOf[T]
   }
 
-  private def reduceRead[T](path: List[Rule]): T = {
-    reduce(read(path)).asInstanceOf[T]
-  }
-
-  private def reduceRead[T](path: List[Rule], json: String): T = {
-    reduceRead[T](path, JSONParser(json).parser())
-  }
-
-  private def reduceRead[T](path: List[Rule], json: Iterator[Char]): T = {
-    reduceRead[T](path, JSONParser(json).parser())
-  }
-
-  private def reduceRead[T](path: List[Rule], json: JSONType): T = {
-    reduce(read(path, json)).asInstanceOf[T]
-  }
-
   def reduceRead[T](path: Path): T = {
     reduceRead[T](path.build)
   }
@@ -380,6 +500,41 @@ class JSONPointer {
 
   def reduceRead[T](path: Path, json: JSONType): T = {
     reduceRead[T](path.build, json)
+  }
+
+  private def read[T](path: List[Rule]): T = {
+    require(json != None, "json is None")
+    read[T](path, json.get)
+  }
+
+  private def read[T](path: List[Rule], json: String): T = {
+    read[T](path, JSONParser(json).parser())
+  }
+
+  private def read[T](path: List[Rule], json: Iterator[Char]): T = {
+    read[T](path, JSONParser(json).parser())
+  }
+
+  private def read[T](rules: List[Rule], json: JSONType): T = {
+    var temp: Any = json
+    rules.foreach(rule => temp = solver(rule, temp))
+    temp.asInstanceOf[T]
+  }
+
+  private def reduceRead[T](path: List[Rule]): T = {
+    reduce(read(path)).asInstanceOf[T]
+  }
+
+  private def reduceRead[T](path: List[Rule], json: String): T = {
+    reduceRead[T](path, JSONParser(json).parser())
+  }
+
+  private def reduceRead[T](path: List[Rule], json: Iterator[Char]): T = {
+    reduceRead[T](path, JSONParser(json).parser())
+  }
+
+  private def reduceRead[T](path: List[Rule], json: JSONType): T = {
+    reduce(read(path, json)).asInstanceOf[T]
   }
 
   private def merge(rules: List[Rule], list: List[Option[Any]]): List[Rule] = {
@@ -547,97 +702,3 @@ class JSONPointer {
     }
   }
 }
-
-class Path() {
-
-  type Wildcard = () => *
-
-  import Path._
-
-  var path: List[Rule] = List.empty[Rule]
-
-  def /(args: String*): Path = {
-    if (args.size > 1) {
-      path = path :+ Rule(args.mkString(","), RuleType.SPLIT, None, args.toList)
-    } else {
-      path = path :+ Rule(args.mkString(","))
-    }
-    this
-  }
-
-  def /(args: Int*)(implicit d: DummyImplicit): Path = {
-    if (args.size > 1) {
-      path = path :+ Rule(args.mkString(","), RuleType.SPLIT, None, args.map(_.toString).toList)
-    } else {
-      path = path :+ Rule(args.mkString(","))
-    }
-    this
-  }
-
-  def /(arg: (Int, Int)): Path = {
-    path = path :+ Rule(arg._1 + ":" + arg._2)
-    this
-  }
-
-  def /(wildcard: Wildcard): Path = {
-    path = path :+ Rule("*", RuleType.WILDCARD)
-    this
-  }
-
-  def /(wildcard: Wildcard, f: String => Boolean): Path = {
-    path = path :+ Rule("*", RuleType.WILDCARD, Some(f))
-    this
-  }
-
-  def /(wildcard: => Wildcard, f: Int => Boolean)(implicit d: DummyImplicit): Path = {
-    path = path :+ Rule("*", RuleType.WILDCARD, Some(f))
-    this
-  }
-
-  def /(wildcard: => Wildcard, f: (Int, Int) => Boolean)(implicit d: DummyImplicit): Path = {
-    path = path :+ Rule("*", RuleType.WILDCARD, Some(f))
-    this
-  }
-
-  def +(that: Path): Path = {
-    path = path ::: that.path
-    this
-  }
-
-  def build(): List[Rule] = {
-    val rs = path
-    path = List.empty[Rule]
-    rs
-  }
-
-  override def toString(): String = {
-    path.map(e => if (e.ruleType == RuleType.TOKEN) quote(e.rule) else e.rule).mkString("/", "/", "")
-  }
-}
-
-object Path {
-  def quote(str: String): String = {
-    val it: Iterator[Char] = str.iterator
-    val sb: StringBuilder = new StringBuilder
-    while (it.hasNext) {
-      it.next() match {
-        case '~' =>
-          sb.append('~')
-          sb.append('0')
-        case '/' =>
-          sb.append('~')
-          sb.append('1')
-        case ',' =>
-          sb.append('~')
-          sb.append(',')
-        case '*' =>
-          sb.append('~')
-          sb.append('*')
-        case ch => sb.append(ch)
-      }
-    }
-    sb.toString()
-  }
-}
-
-case class *()

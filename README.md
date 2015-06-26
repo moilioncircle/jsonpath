@@ -7,9 +7,9 @@ This is an implementation of JSON pointer[(RFC 6901)](http://tools.ietf.org/html
 JSON pointer syntax(add another three keywords `:` `,` `*`).
 This library support 2 ways to access JSON notation data. `string path parser` and `scala DSL`
 
-##Syntax
+## Syntax
 
-####string path parser:
+#### string path parser:
 
 Here is a list of supported operators : 
 
@@ -52,7 +52,7 @@ val value7 = JSONPointer().reduceRead[Any]("/-3/1", json)
 assert(value7 === NotFound)
 ```
 
-####scala DSL:
+#### scala DSL:
 
 Code example:
 
@@ -97,9 +97,9 @@ assert(value4 === List(JSONArray(List(true, false, null)), JSONObject(Map("abc" 
 
 ```
 
-##Escape
+## Escape
 
-####string path parser:
+#### string path parser:
 
 | *Character* | *Escape*                       | *Example*                   |
 | ----------- | ------------------------------ | --------------------------- |
@@ -114,7 +114,7 @@ For example:
 import Path._
 val path = s"/*/${quote("*")}/${quote("abc,bcd")}"
 ```
-####scala DSL:
+#### scala DSL:
 
 When you are using `scala DSL`.you don't need escape any character.
 for example 
@@ -123,43 +123,35 @@ val path = new Path / * / "*" / "abc,bcd"
 ```
 This `path` will compile to string `/*/~*/abc~,bcd`
 
-##Filters
+## Filters
 
-Filters can only used on wildcard(`*`) keywords.as you can see above.  
-We provied three filters.two of them used on `JSONArray`.another one used on `JSONObject`  
+Filters can only used on `*` .as you can see above.
+We provided three filters.two of them used on `JSONArray`.another one used on `JSONObject`
 `JSONArray`: `Int=>Boolean` and `(Int,Int)=>Boolean`  
 `JSONObject`: `String=>Boolean`  
 
 `Int=>Boolean` :`Int` represents `JSONArray` index.if result is `true` this index of `JSONArray` will return.  
-`(Int,Int)=>Boolean` : first `Int` represents `JSONArray` index.and second `Int` represents `JSONArray`'s size.  
-`String=>Boolean` : `String` represents `JSONObject`'s key.  
+`(Int,Int)=>Boolean` : first `Int` represents `JSONArray` index.and second `Int` represents `JSONArray` size.
+`String=>Boolean` : `String` represents `JSONObject` key.
 
-####string path parser
+#### string path parser:
+
 ```scala
 JSONPointer().reduceRead[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
 ```
-You **MUST** add two filters to the path above.because this path contains two wildcards.  
-Firse filter is `None`.represents filter all things.  
+You **MUST** add two filters to the path above.because this path contains two `*`.
+First filter is `None`.represents filter all things.
 Second filter is `Some((e: String) => e.contains("b"))`.represents filter that `key` contains string `"b"`.  
 
-####scala DSL
+#### scala DSL:
 ```scala
 new Path / * /(*, (e: String) => e.contains("b"))
 ```
 You don't need add a filter on first `*`.because with default filter is `None`.
 
-## More examples
+## Examples
 
-  * `/store/book/0/author` get first book author  
-  * `/store/book/0,2/author` get 1,3 book author
-  * `/store/book/0:2/author` get 1,2,3 book author 
-  * `/store/book/:2/author`  get 1,2,3 book author  
-  * `/store/book/-1:-3/author` get last 3 book author 
-  * `/store/book/:-3/author` get 1 to last 3th(include) book author 
-  * `/store/book/:/author`    get all book author
-  * `/store/book/0:-1/author` get all book author
-  * `/store/book/*/author`    get all book author
-  * `/store/bicycle/color` get color of bicycle
+#### Normal:
 
 ``` json
 {
@@ -201,7 +193,18 @@ You don't need add a filter on first `*`.because with default filter is `None`.
 }
 ```
 
-##Special examples
+  * `/store/book/0/author`     =>`"Nigel Rees"`
+  * `/store/book/0,2/author`   =>`List("Nigel Rees","Herman Melville")`
+  * `/store/book/0:2/author`   =>`List("Nigel Rees","Evelyn Waugh","Herman Melville")`
+  * `/store/book/:2/author`    =>`List("Nigel Rees","Evelyn Waugh","Herman Melville")`
+  * `/store/book/-1:-3/author` =>`List("J. R. R. Tolkien","Herman Melville","Evelyn Waugh")`
+  * `/store/book/:-3/author`   =>`List("Nigel Rees","Evelyn Waugh")`
+  * `/store/book/:/author`     =>`List("Nigel Rees","Evelyn Waugh","Herman Melville","J. R. R. Tolkien")`
+  * `/store/book/0:-1/author`  =>`List("Nigel Rees","Evelyn Waugh","Herman Melville","J. R. R. Tolkien")`
+  * `/store/book/*/author`     =>`List("Nigel Rees","Evelyn Waugh","Herman Melville","J. R. R. Tolkien")`
+  * `/store/bicycle/color`     =>`"red"`
+
+#### Special:
 
 ``` json
 {
@@ -238,7 +241,7 @@ You don't need add a filter on first `*`.because with default filter is `None`.
 `/0:2`   |10
 `/~*`    |11
 
-##References
+## References
 
   * [JSON Pointer (RFC 6901)](http://tools.ietf.org/html/rfc6901)
   * [JSON (JavaScript Object Notation)](http://json.org/)
