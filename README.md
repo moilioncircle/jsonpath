@@ -115,14 +115,16 @@ For example:
 import Path._
 val path = s"/*/${quote("*")}/${quote("abc,bcd")}"
 ```
+The `path` will compile to string `/*/~*/abc~,bcd`  
+
 #### scala DSL:
 
 When you are using `scala DSL`.you don't need escape any character.  
-for example  
+For example:  
 ```scala
 val path = new Path / * / "*" / "abc,bcd"
 ```
-This `path` will compile to string `/*/~*/abc~,bcd`
+The `path` will compile to string `/*/~*/abc~,bcd`
 
 ## Filters
 
