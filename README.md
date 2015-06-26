@@ -107,7 +107,7 @@ assert(value4 === List(JSONArray(List(true, false, null)), JSONObject(Map("abc" 
 |  ``~``      | ``~0`` (RFC6901 compatibility) | ``/~``=>``/~0``             |
 |  ``/``      | ``~1`` (RFC6901 compatibility) | ``/a/b``=> ``/a~1b``        |
 |  ``,``      | ``~,``                         | ``/foo,bar``=>``/foo~,bar`` |
-|  ``*``      | ``~*``                         | ``/store/*``=>``/store/~*`  |
+|  ``*``      | ``~*``                         | ``/store/*``=>``/store/~*`` |
 
 You can use these rule to escape character manual.or you can use helper method `quote` to do these things.  
 For example:  
