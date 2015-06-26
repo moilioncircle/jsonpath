@@ -1,109 +1,160 @@
 # jsonpath
 
-a sexy json reading like the xml-sax.
-
 [![Build Status](https://travis-ci.org/moilioncircle/jsonpath.svg?branch=master)](https://travis-ci.org/moilioncircle/jsonpath)
 [![Coverage Status](https://coveralls.io/repos/moilioncircle/jsonpath/badge.svg?branch=master)](https://coveralls.io/r/moilioncircle/jsonpath?branch=master)
 
-## 适用场景
+This is an implementation of JSON pointer[(RFC 6901)](http://tools.ietf.org/html/rfc6901) in Scala which extends  
+JSON pointer syntax(add another three keywords `:` `,` `*`).  
+This library support 2 ways to access JSON notation data. `string path parser` and `scala DSL`  
 
-目前，JSON的读操作多采用了类似XML的DOM方式，
-即使只读一个字段，也要全部加载和解析，很不经济。
+## Syntax
 
-jsonpath，采用类似XML的SAX方式，按需读取。
-特别适合，读取的属性数不超过总属性20%的场景。
+#### string path parser:  
 
-jsonpath的特点就是：速度快，资源省，规则简单，没有Bean。
+Here is a list of supported operators :   
 
-## 不适用场景
+| *Operator* | *Description*                  | *Example*                       |
+| ---------- | ------------------------------ | ------------------------------- |
+| ``/``      | path split                     | ``/foo``                        |
+| ``:``      | array slice(python like)       | ``/-1:-3``(last 3 elements)     |
+| ``,``      | collection of names or indices | ``/foo,bar`` or ``/foo/1,-1,2`` |
+| ``*``      | wildcard                       | ``/store/book/*``               |
 
-  * JSON写操作。
-  * JSON序列化和反序列化（Bean<=>String）。
-  * JSON读取属性数超过总属性的50%。
+Code example:  
 
-## 语法说明
+``` scala
+val json =
+      """
+        |[
+        |    [
+        |        true,
+        |        false,
+        |        null
+        |    ],
+        |    {
+        |        "abc": 1.233e-10,
+        |        "bcd": true,
+        |        "b": null
+        |    },
+        |    {
+        |        "": 1.233e-10,
+        |        "bcd": true,
+        |        "b": 1.23
+        |    },
+        |    false,
+        |    null
+        |]
+      """.stripMargin
+      
+val value6 = JSONPointer().reduceRead[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
+assert(value6 === List(List(1.233E-10, true, null), List(true, 1.23)))
 
-完全兼容 JSON Pointer (RFC 6901)。但扩展了以下语法:
-
-### 数组（array），如：`[1,2,3,4,5]`
-
-  * `:`，区间（range），参考python list。
-
-    - `x:y` 表示从x（含）到y（含），保证顺序。
-      `x`可以省略，默认是`0`，即第一个元素。
-      `y`可以省略，默认是`-1`，即倒数第一个元素。
-
-    - `-1:-3`，取得`[5,4,3]`，保证倒序。
-    - `4:2`，  取得`[5,4,3]`，保证倒序。
-    - `-1:2`， 取得`[5,4,3]`，保证倒序。
-    - `0:2`，  取得`[1,2,3]`，保证正序。
-    - `:-3`，  取得`[1,2,3]`，保证正序。
-    - `2:`，   取得`[3,4,5]`，保证正序。
-    - `:`，取得`[1,2,3,4,5]`，保证正序。
-    - `4:-1`，取得`[5]`，重合只取一个。
-
-
-  * `,`，多选（select），多选指定key。
-    - `-1,-3`，取得`[5,3]`，key一致
-    - `4,2`，  取得`[5,3]`，key一致。
-    - `-1,2`， 取得`[5,3]`，key一致。
-    - `0,2`，  取得`[1,3]`，key一致。
-    - `4,-1`， 取得`[5,5]`，重合都取。
-    - `0,2,4`， 取得`[1,3,5]`，key一致。。
-
-
-  * `*`，过滤（filter），对key进行过滤。
-    - 只在API编程中支持，默认取全部。
-
-### 对象（object），如`{"a":1,"b":2,"c":3,"d":4}`
-
-  * `,`，多选（select），多选指定key。
-    - `a,b`，取得`[1,2]`，key一致
-    - `a,c,d`，  取得`[1,3,4]`，key一致。
-
-  * `*`，过滤（filter），对key进行过滤。
-    - 只在API编程中支持，默认取全部。
-
-### 转义（escape）
-
-有关转义，RFC6901使用`~0`=>`～`，`~1`=>`/`的表示法。
-
-    Because the characters '~' (%x7E) and '/' (%x2F) have special
-    meanings in JSON Pointer, '~' needs to be encoded as '~0' and '/'
-    needs to be encoded as '~1' when these characters appear in a
-    reference token.
-
-API提供转义工具类，完成path的转义。
-如果有路径歧义，采用key优先匹配原则，如
-
-``` json
-{
-    "0,2":9,
-    "0":10,
-    "2":11,
-    "*":{"key":12},
-    "m":{"key":13}
-}
+val value7 = JSONPointer().reduceRead[Any]("/-3/1", json)
+assert(value7 === NotFound)
 ```
-`/0,2` 得到`9`，而不是`10`和`11`，如果要得到后者，  
-则需要分解路径`/0,2`为`/0`,`/2`，使用路径组合实现。
 
-`/*/key` 得到`12`，而不是`12`和`13`。如果要得到后者，  
-只能通过过滤器的API实现，如 `read("/*/key",ALL)`。
+#### scala DSL:
 
+Code example:
 
-### 普通JSON
+``` scala
+val json =
+      """
+        |[
+        |    [
+        |        true,
+        |        false,
+        |        null
+        |    ],
+        |    {
+        |        "abc": 1.233e-10,
+        |        "bcd": true,
+        |        "b": null
+        |    },
+        |    {
+        |        "": 1.233e-10,
+        |        "bcd": true,
+        |        "b": 1.23
+        |    },
+        |    false,
+        |    null
+        |]
+      """.stripMargin
 
-  * `/store/book/0/author` 获得第1本书的作者(author)  
-  * `/store/book/0,2/author` 获得第1和3本书的作者(author) 
-  * `/store/book/0:2/author` 获得第1,2,3本书的作者(author) 
-  * `/store/book/:2/author`  获得第1,2,3本书的作者(author) 
-  * `/store/book/-1:-3/author` 获得倒数第1,2,3本书的作者(author) 
-  * `/store/book/:-3/author` 获得第1本到倒数第3本（含）之间书的作者(author) 
-  * `/store/book/:/author`    获得所有书的作者(author)
-  * `/store/book/0:-1/author` 获得所有书的作者(author)
-  * `/store/book/*/author`    获得所有书的作者(author)
-  * `/store/bicycle/color` 获得bicycle的color
+val value0 = JSONPointer().read[List[Any]](new Path / -3 /("bcd", ""), json)
+assert(value0 === List(true, 1.233E-10))
+
+val value1 = JSONPointer().reduceRead[List[Any]](new Path / * /(*, (e: String) => e.contains("b")), json)
+assert(value1 === List(List(1.233E-10, true, null), List(true, 1.23)))
+
+val value2 = JSONPointer().reduceRead[Any](new Path / (1 -> -1) /(*, (_: String) == "b"), json)
+assert(value2 === List(null, 1.23))
+    
+val value3 = JSONPointer().read[Boolean](new Path / -3 /"bcd", json)
+assert(value3 === true)
+    
+val value4 = JSONPointer().reduceRead[List[Any]](new Path /(*, _ < _ -1), json)
+assert(value4 === List(JSONArray(List(true, false, null)), JSONObject(Map("abc" -> 1.233E-10, "bcd" -> true, "b" -> null)),JSONObject(Map( ""-> 1.233E-10, "bcd" -> true, "b" -> 1.23)), false))
+
+```
+
+## Escape  
+
+#### string path parser:  
+
+| *Character* | *Escape*                       | *Example*                   |
+| ----------- | ------------------------------ | --------------------------- |
+|  ``~``      | ``~0`` (RFC6901 compatibility) | ``/~``=>``/~0``             |
+|  ``/``      | ``~1`` (RFC6901 compatibility) | ``/a/b``=> ``/a~1b``        |
+|  ``,``      | ``~,``                         | ``/foo,bar``=>``/foo~,bar`` |
+|  ``*``      | ``~*``                         | ``/store/*``=>``/store/~*`` |
+
+You can use these rule to escape character manual.or you can use helper method `quote` to do these things.  
+For example:  
+```scala
+import Path._
+val path = s"/*/${quote("*")}/${quote("abc,bcd")}"
+```
+The `path` will compile to string `/*/~*/abc~,bcd`  
+
+#### scala DSL:
+
+When you are using `scala DSL`.you don't need escape any character.  
+For example:  
+```scala
+val path = new Path / * / "*" / "abc,bcd"
+```
+The `path` will compile to string `/*/~*/abc~,bcd`
+
+## Filters
+
+Filters can only used on `*` .as you can see above.  
+We provided three filters.two of them used on `JSONArray`.another one used on `JSONObject`  
+`JSONArray`: `Int=>Boolean` and `(Int,Int)=>Boolean`  
+`JSONObject`: `String=>Boolean`  
+
+`Int=>Boolean` :`Int` represents `JSONArray` index.if result is `true` this index of `JSONArray` will return.  
+`(Int,Int)=>Boolean` : first `Int` represents `JSONArray` index.and second `Int` represents `JSONArray` size.  
+`String=>Boolean` : `String` represents `JSONObject` key.  
+
+#### string path parser:
+
+```scala
+JSONPointer().reduceRead[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
+```
+You **MUST** add two filters to the path above.because this path contains two `*`.  
+First filter is `None`.represents filter all things.  
+Second filter is `Some((e: String) => e.contains("b"))`.represents filter that `key` contains string `"b"`.  
+
+#### scala DSL:  
+```scala
+new Path / * /(*, (e: String) => e.contains("b"))
+```
+You don't need add a filter on first `*`.because with default filter is `None`.  
+
+## Examples
+
+#### Normal:
 
 ``` json
 {
@@ -145,7 +196,18 @@ API提供转义工具类，完成path的转义。
 }
 ```
 
-### 特殊JSON
+  * `/store/book/0/author`     =>`"Nigel Rees"`
+  * `/store/book/0,2/author`   =>`List("Nigel Rees","Herman Melville")`
+  * `/store/book/0:2/author`   =>`List("Nigel Rees","Evelyn Waugh","Herman Melville")`
+  * `/store/book/:2/author`    =>`List("Nigel Rees","Evelyn Waugh","Herman Melville")`
+  * `/store/book/-1:-3/author` =>`List("J. R. R. Tolkien","Herman Melville","Evelyn Waugh")`
+  * `/store/book/:-3/author`   =>`List("Nigel Rees","Evelyn Waugh")`
+  * `/store/book/:/author`     =>`List("Nigel Rees","Evelyn Waugh","Herman Melville","J. R. R. Tolkien")`
+  * `/store/book/0:-1/author`  =>`List("Nigel Rees","Evelyn Waugh","Herman Melville","J. R. R. Tolkien")`
+  * `/store/book/*/author`     =>`List("Nigel Rees","Evelyn Waugh","Herman Melville","J. R. R. Tolkien")`
+  * `/store/bicycle/color`     =>`"red"`
+
+#### Special:
 
 ``` json
 {
@@ -178,11 +240,11 @@ API提供转义工具类，完成path的转义。
 `/k\"l`  |6
 `/ `     |7
 `/m~0n`  |8
-`/0,2`   |9
+`/0~,2`  |9
 `/0:2`   |10
-`/*`     |11
+`/~*`    |11
 
-## 参考资料
+## References
 
   * [JSON Pointer (RFC 6901)](http://tools.ietf.org/html/rfc6901)
   * [JSON (JavaScript Object Notation)](http://json.org/)

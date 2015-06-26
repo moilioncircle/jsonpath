@@ -5,8 +5,8 @@ import org.scalatest.FunSuite
 import org.scalatest.junit.JUnitRunner
 
 /**
- * Created by leon on 15-6-1.
- */
+* Created by leon on 15-6-1.
+*/
 @RunWith(classOf[JUnitRunner])
 class JSONPathTest extends FunSuite {
   test("json parser 10") {
@@ -456,43 +456,41 @@ class JSONPathTest extends FunSuite {
     assert(value1 == JSONObject(Map()))
   }
 
-  import RuleType._
-
   test("json pointer parser") {
     var str = "/abcd/0~00/0123[*]/~0~1"
     var jp = JSONPointerParser(str)
     var rules: List[Rule] = jp.parsePath()
-    assert(rules == List(Rule("abcd", NORMAL_TOKEN), Rule("0~0", NORMAL_TOKEN), Rule("0123[*]", NORMAL_TOKEN), Rule("~/", NORMAL_TOKEN)))
+    assert(rules == List(Rule("abcd"), Rule("0~0"), Rule("0123[*]"), Rule("~/")))
 
     str = "/abcd"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("abcd", NORMAL_TOKEN)))
+    assert(rules == List(Rule("abcd")))
 
     str = "/0"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("0", NORMAL_TOKEN)))
+    assert(rules == List(Rule("0")))
 
     str = "/012"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("012", NORMAL_TOKEN)))
+    assert(rules == List(Rule("012")))
 
     str = "/12"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("12", NORMAL_TOKEN)))
+    assert(rules == List(Rule("12")))
 
     str = "/"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("", NORMAL_TOKEN)))
+    assert(rules == List(Rule("")))
 
     str = "/~0"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("~", NORMAL_TOKEN)))
+    assert(rules == List(Rule("~")))
 
     str = ""
     jp = JSONPointerParser(str)
@@ -502,82 +500,110 @@ class JSONPathTest extends FunSuite {
     str = "/"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("", NORMAL_TOKEN)))
+    assert(rules == List(Rule("")))
 
     str = "/~"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("~", NORMAL_TOKEN)))
+    assert(rules == List(Rule("~")))
 
     str = "/~1"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("/", NORMAL_TOKEN)))
+    assert(rules == List(Rule("/")))
 
     str = "/12~0~1"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("12~/", NORMAL_TOKEN)))
+    assert(rules == List(Rule("12~/")))
 
     str = "/0~1/"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("0/", NORMAL_TOKEN), Rule("", NORMAL_TOKEN)))
+    assert(rules == List(Rule("0/"), Rule("")))
 
-    str = "../../../"
-    jp = JSONPointerParser(str)
-    rules = jp.parsePath()
-    assert(rules == List(Rule("..", PATH_TOKEN), Rule("..", PATH_TOKEN), Rule("..", PATH_TOKEN), Rule("", NORMAL_TOKEN)))
+    try {
+      str = "../../../"
+      jp = JSONPointerParser(str)
+      rules = jp.parsePath()
+      fail()
+    } catch {
+      case e: JSONPointerSyntaxException => // PASS
+    }
 
-    str = "./../../"
-    jp = JSONPointerParser(str)
-    rules = jp.parsePath()
-    assert(rules == List(Rule(".", CURRENT_PATH_TOKEN), Rule("..", NORMAL_TOKEN), Rule("..", NORMAL_TOKEN), Rule("", NORMAL_TOKEN)))
+    try {
+      str = "./../../"
+      jp = JSONPointerParser(str)
+      rules = jp.parsePath()
+      fail()
+    } catch {
+      case e: JSONPointerSyntaxException => // PASS
+    }
 
-    str = "./"
-    jp = JSONPointerParser(str)
-    rules = jp.parsePath()
-    assert(rules == List(Rule(".", CURRENT_PATH_TOKEN), Rule("", NORMAL_TOKEN)))
+    try {
+      str = "./"
+      jp = JSONPointerParser(str)
+      rules = jp.parsePath()
+      fail()
+    } catch {
+      case e: JSONPointerSyntaxException => // PASS
+    }
 
-    str = "../"
-    jp = JSONPointerParser(str)
-    rules = jp.parsePath()
-    assert(rules == List(Rule("..", PATH_TOKEN), Rule("", NORMAL_TOKEN)))
+    try {
+      str = "../"
+      jp = JSONPointerParser(str)
+      rules = jp.parsePath()
+      fail()
+    } catch {
+      case e: JSONPointerSyntaxException => // PASS
+    }
 
     str = "/0"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("0", NORMAL_TOKEN)))
+    assert(rules == List(Rule("0")))
 
     str = "//"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("", NORMAL_TOKEN), Rule("", NORMAL_TOKEN)))
+    assert(rules == List(Rule(""), Rule("")))
 
     str = "/0/1"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("0", NORMAL_TOKEN), Rule("1", NORMAL_TOKEN)))
+    assert(rules == List(Rule("0"), Rule("1")))
 
     str = "/0/~abc"
     jp = JSONPointerParser(str)
     rules = jp.parsePath()
-    assert(rules == List(Rule("0", NORMAL_TOKEN), Rule("~abc", NORMAL_TOKEN)))
+    assert(rules == List(Rule("0"), Rule("~abc")))
 
-    str = "../."
-    jp = JSONPointerParser(str)
-    rules = jp.parsePath()
-    assert(rules == List(Rule("..", PATH_TOKEN), Rule(".", NORMAL_TOKEN)))
+    try {
+      str = "../."
+      jp = JSONPointerParser(str)
+      rules = jp.parsePath()
+      fail()
+    } catch {
+      case e: JSONPointerSyntaxException => // PASS
+    }
 
-    str = "../..abc"
-    jp = JSONPointerParser(str)
-    rules = jp.parsePath()
-    assert(rules == List(Rule("..", PATH_TOKEN), Rule("..abc", NORMAL_TOKEN)))
+    try {
+      str = "../..abc"
+      jp = JSONPointerParser(str)
+      rules = jp.parsePath()
+      fail()
+    } catch {
+      case e: JSONPointerSyntaxException => // PASS
+    }
 
-    str = "../.abc"
-    jp = JSONPointerParser(str)
-    rules = jp.parsePath()
-    assert(rules == List(Rule("..", PATH_TOKEN), Rule(".abc", NORMAL_TOKEN)))
+    try {
+      str = "../.abc"
+      jp = JSONPointerParser(str)
+      rules = jp.parsePath()
+      fail()
+    } catch {
+      case e: JSONPointerSyntaxException => // PASS
+    }
 
     try {
       str = ".../"
@@ -817,8 +843,8 @@ class JSONPathTest extends FunSuite {
     val value1 = jp.reduceRead[String]("/store/book/1:2/isbn")
     assert(value1 === "0-553-21311-3")
 
-    val value2 = jp.reduceRead[List[_]]("/store/book/1:2/abc")
-    assert(value2 === List())
+    val value2 = jp.reduceRead[Any]("/store/book/1:2/abc")
+    assert(value2 === NotFound)
 
   }
 
@@ -862,26 +888,8 @@ class JSONPathTest extends FunSuite {
     val jp = JSONPointer(json)
     jp.read("/store/book/3")
 
-    val value1 = jp.read[String]("./isbn")
-    assert(value1 === "0-395-19395-8")
-
-    val value2 = jp.read[String]("../2/author")
-    assert(value2 === "Herman Melville")
-
-    val value3 = jp.read[Double]("../../bicycle/price")
-    assert(value3 === 19.95)
-
     val value4 = jp.read[Double]("/store/bicycle/price")
     assert(value4 === 19.95)
-
-    val value5 = jp.read[String]("../color")
-    assert(value5 === "red")
-
-    val value6 = jp.read[Boolean]("../~2")
-    assert(value6 === false)
-
-    val value7 = jp.read[Boolean]("../..")
-    assert(value7 === false)
 
     {
       val json = "[]"
@@ -920,12 +928,6 @@ class JSONPathTest extends FunSuite {
     value = jp.read[String]("/foo/0")
     assert(value === "bar")
 
-    value = jp.read[Int]("../../")
-    assert(value === 0)
-
-    value = jp.read[Int]("../../ ")
-    assert(value === 7)
-
     value = jp.read[Int]("/")
     assert(value === 0)
 
@@ -953,13 +955,13 @@ class JSONPathTest extends FunSuite {
     value = jp.read[Int]("/m~0n")
     assert(value === 8)
 
-    value = jp.read[Int]("/0,2")
+    value = jp.read[Int]("/0~,2")
     assert(value === 9)
 
     value = jp.read[Int]("/0-2")
     assert(value === 10)
 
-    value = jp.read[Int]("/*")
+    value = jp.read[Int]("/~*")
     assert(value === 11)
 
   }
@@ -1083,36 +1085,63 @@ class JSONPathTest extends FunSuite {
     }
     {
       val jsonObj = JSONParser(json).parser()
-      assert(JSONPointer().read[Double]("/0",jsonObj) == 155e+012)
+      assert(JSONPointer().read[Double]("/0", jsonObj) == 155e+012)
     }
     {
-      assert(JSONPointer().read[Double]("/0",json.iterator) == 155e+012)
+      assert(JSONPointer().read[Double]("/0", json.iterator) == 155e+012)
     }
     {
       val jsonObj = JSONParser(json).parser()
-      assert(JSONPointer().reduceRead[Double]("/0",jsonObj) == 155e+012)
+      assert(JSONPointer().reduceRead[Double]("/0", jsonObj) == 155e+012)
     }
     {
-      assert(JSONPointer().reduceRead[Double]("/0",json.iterator) == 155e+012)
+      assert(JSONPointer().reduceRead[Double]("/0", json.iterator) == 155e+012)
     }
     {
-      assert(JSONPointer().reduceRead[Double]("/0",json) == 155e+012)
+      assert(JSONPointer().reduceRead[Double]("/0", json) == 155e+012)
     }
     {
-      try{
+      try {
         JSONPointer().reduceRead("/0")
         fail()
-      }catch {
-        case e:IllegalArgumentException=>
+      } catch {
+        case e: IllegalArgumentException =>
       }
     }
     {
-      try{
-        JSONPointer().reduceRead("../",JSONParser(json).parser())
+      try {
+        JSONPointer().reduceRead("../", JSONParser(json).parser())
         fail()
-      }catch {
-        case e:IllegalArgumentException=>
+      } catch {
+        case e: JSONPointerSyntaxException =>
       }
+    }
+    {
+      val value = JSONPointer().read[Double](new Path / "0", json)
+      assert(value === 155e+012)
+    }
+    {
+      val jsonObj = JSONParser(json).parser()
+      assert(JSONPointer().read[Double](new Path / "0", jsonObj) == 155e+012)
+    }
+    {
+      assert(JSONPointer().read[Double](new Path / "0", json.iterator) == 155e+012)
+    }
+    {
+      assert(JSONPointer(json).read[Double](new Path / "0") == 155e+012)
+    }
+    {
+      val jsonObj = JSONParser(json).parser()
+      assert(JSONPointer().reduceRead[Double](new Path / "0", jsonObj) == 155e+012)
+    }
+    {
+      assert(JSONPointer().reduceRead[Double](new Path / "0", json.iterator) == 155e+012)
+    }
+    {
+      assert(JSONPointer().reduceRead[Double](new Path / "0", json) == 155e+012)
+    }
+    {
+      assert(JSONPointer(json).reduceRead[Double](new Path / "0") == 155e+012)
     }
   }
 
