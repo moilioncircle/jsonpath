@@ -131,7 +131,7 @@ We provided three filters.two of them used on `JSONArray`.another one used on `J
 `JSONObject`: `String=>Boolean`  
 
 `Int=>Boolean` :`Int` represents `JSONArray` index.if result is `true` this index of `JSONArray` will return.  
-`(Int,Int)=>Boolean` : first `Int` represents `JSONArray` index.and second `Int` represents `JSONArray` size.  
+`(Int,Int)=>Boolean` : first `Int` represents `JSONArray` index.and second `Int` represents `JSONArray` size.
 `String=>Boolean` : `String` represents `JSONObject` key.
 
 #### string path parser:
