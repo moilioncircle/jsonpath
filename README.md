@@ -1,7 +1,7 @@
 # jsonpath
 
-[![Build Status](https://travis-ci.org/leonchen83/jsonpath.svg?branch=master)](https://travis-ci.org/leonchen83/jsonpath)
-[![Coverage Status](https://coveralls.io/repos/leonchen83/jsonpath/badge.svg?branch=master)](https://coveralls.io/r/leonchen83/jsonpath?branch=master)
+[![Build Status](https://travis-ci.org/moilioncircle/jsonpath.svg?branch=master)](https://travis-ci.org/moilioncircle/jsonpath)
+[![Coverage Status](https://coveralls.io/repos/moilioncircle/jsonpath/badge.svg?branch=master)](https://coveralls.io/r/moilioncircle/jsonpath?branch=master)
 
 This is an implementation of JSON pointer[(RFC 6901)](http://tools.ietf.org/html/rfc6901) in Scala which extends  
 JSON pointer syntax(add another three keywords `:` `,` `*`).  
