@@ -5,11 +5,11 @@
 
 This is an implementation of JSON pointer[(RFC 6901)](http://tools.ietf.org/html/rfc6901) in Scala which extends  
 JSON pointer syntax(add another three keywords `:` `,` `*`).  
-This library support 2 ways to access JSON notation data. `string path parser` and `Scala DSL`  
+This library support 2 ways to access JSON notation data. `String path parser` and `Scala DSL`  
 
 ## Syntax
 
-#### string path parser:  
+#### String path parser:  
 
 Here is a list of supported operators :   
 
@@ -100,7 +100,7 @@ assert(value4 === List(JSONArray(List(true, false, null)), JSONObject(Map("abc" 
 
 ## Escape  
 
-#### string path parser:  
+#### String path parser:  
 
 | *Character* | *Escape*                       | *Example*                   |
 | ----------- | ------------------------------ | --------------------------- |
@@ -137,7 +137,7 @@ We provided three filters.two of them used on `JSONArray`.another one used on `J
 `(Int,Int)=>Boolean` : first `Int` represents `JSONArray` index.and second `Int` represents `JSONArray` size.  
 `String=>Boolean` : `String` represents `JSONObject` key.  
 
-#### string path parser:
+#### String path parser:
 
 ```scala
 JSONPointer().reduceRead[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
