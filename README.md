@@ -5,7 +5,7 @@
 
 This is an implementation of JSON pointer[(RFC 6901)](http://tools.ietf.org/html/rfc6901) in Scala which extends  
 JSON pointer syntax(add another three keywords `:` `,` `*`).  
-This library support 2 ways to access JSON notation data. `string path parser` and `scala DSL`  
+This library support 2 ways to access JSON notation data. `string path parser` and `Scala DSL`  
 
 ## Syntax
 
@@ -53,7 +53,7 @@ val value7 = JSONPointer().reduceRead[Any]("/-3/1", json)
 assert(value7 === NotFound)
 ```
 
-#### scala DSL:
+#### Scala DSL:
 
 Code example:
 
@@ -117,9 +117,9 @@ val path = s"/*/${quote("*")}/${quote("abc,bcd")}"
 ```
 The `path` will compile to string `/*/~*/abc~,bcd`  
 
-#### scala DSL:
+#### Scala DSL:
 
-When you are using `scala DSL`.you don't need escape any character.  
+When you are using `Scala DSL`.you don't need escape any character.  
 For example:  
 ```scala
 val path = new Path / * / "*" / "abc,bcd"
@@ -146,7 +146,7 @@ You **MUST** add two filters to the path above.because this path contains two `*
 First filter is `None`.represents filter all things.  
 Second filter is `Some((e: String) => e.contains("b"))`.represents filter that `key` contains string `"b"`.  
 
-#### scala DSL:  
+#### Scala DSL:  
 ```scala
 new Path / * /(*, (e: String) => e.contains("b"))
 ```
