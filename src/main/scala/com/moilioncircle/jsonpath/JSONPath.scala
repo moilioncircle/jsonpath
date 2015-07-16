@@ -89,16 +89,17 @@ package com.moilioncircle.jsonpath
  * |}
  * """.stripMargin
  * val jp = JSONPointer(json)
- * val value = jp.path("/store/book/0:2/isbn")
+ * val value = jp.read[String]("/store/book/0/isbn")
  * }}}
  *
  * @author leon.chen
- * @version 0.2.1
+ * @version 0.3.0
  * @since   1.0.0
  * @see [[http://tools.ietf.org/html/rfc6901 "JSON Pointer (RFC 6901)"]]
  * @see [[http://json.org "JSON (JavaScript Object Notation)"]]
  *
  */
+
 import com.moilioncircle.jsonpath.RuleType.RuleType
 
 /**
@@ -129,6 +130,7 @@ class Path() {
     }
     this
   }
+
   /**
    *
    * @param args one or more JSONArray indices.{{{new Path / 1}}}{{{new Path /(1,-1,5)}}}
@@ -220,7 +222,7 @@ class Path() {
 /**
  * NotFound
  */
-case object NotFound
+private object NotFound
 
 /**
  * help method used by string path parser.
@@ -402,139 +404,78 @@ private[moilioncircle] class JSONPointer {
 
   private var json: Option[JSONType] = None
 
-  def read[T](path: String): T = {
+  def read[T](path: String): Option[T] = {
     require(json != None, "json is None")
     read[T](path, json.get, List.empty)
   }
 
-  def read[T](path: String, json: String): T = {
+  def read[T](path: String, json: String): Option[T] = {
     read[T](path, JSONParser(json).parser(), List.empty)
   }
 
-  def read[T](path: String, json: Iterator[Char]): T = {
+  def read[T](path: String, json: Iterator[Char]): Option[T] = {
     read[T](path, JSONParser(json).parser(), List.empty)
   }
 
-  def read[T](path: String, json: JSONType): T = {
+  def read[T](path: String, json: JSONType): Option[T] = {
     val rules = JSONPointerParser(path).parsePath()
     read[T](merge(rules, List.empty), json)
   }
 
-  def read[T](path: String, filters: List[Option[Any]]): T = {
+  def read[T](path: String, filters: List[Option[Any]]): Option[T] = {
     require(json != None, "json is None")
     read[T](path, json.get, filters)
   }
 
-  def read[T](path: String, json: String, filters: List[Option[Any]]): T = {
+  def read[T](path: String, json: String, filters: List[Option[Any]]): Option[T] = {
     read[T](path, JSONParser(json).parser(), filters)
   }
 
-  def read[T](path: String, json: Iterator[Char], filters: List[Option[Any]]): T = {
+  def read[T](path: String, json: Iterator[Char], filters: List[Option[Any]]): Option[T] = {
     read[T](path, JSONParser(json).parser(), filters)
   }
 
-  def read[T](path: String, json: JSONType, filters: List[Option[Any]]): T = {
+  def read[T](path: String, json: JSONType, filters: List[Option[Any]]): Option[T] = {
     val rules = JSONPointerParser(path).parsePath()
     read[T](merge(rules, filters), json)
   }
 
-  def read[T](path: Path): T = {
+  def read[T](path: Path): Option[T] = {
     read[T](path.build)
   }
 
-  def read[T](path: Path, json: String): T = {
+  def read[T](path: Path, json: String): Option[T] = {
     read[T](path.build, json)
   }
 
-  def read[T](path: Path, json: Iterator[Char]): T = {
+  def read[T](path: Path, json: Iterator[Char]): Option[T] = {
     read[T](path.build, json)
   }
 
-  def read[T](path: Path, json: JSONType): T = {
+  def read[T](path: Path, json: JSONType): Option[T] = {
     read[T](path.build, json)
   }
 
-  def reduceRead[T](path: String): T = {
-    reduce(read[T](path, List.empty)).asInstanceOf[T]
-  }
-
-  def reduceRead[T](path: String, json: String): T = {
-    reduceRead[T](path, JSONParser(json).parser(), List.empty)
-  }
-
-  def reduceRead[T](path: String, json: Iterator[Char]): T = {
-    reduceRead[T](path, JSONParser(json).parser(), List.empty)
-  }
-
-  def reduceRead[T](path: String, json: JSONType): T = {
-    reduce(read(path, json, List.empty)).asInstanceOf[T]
-  }
-
-  def reduceRead[T](path: String, filters: List[Option[Any]]): T = {
-    reduce(read[T](path, filters)).asInstanceOf[T]
-  }
-
-  def reduceRead[T](path: String, json: String, filters: List[Option[Any]]): T = {
-    reduceRead[T](path, JSONParser(json).parser(), filters)
-  }
-
-  def reduceRead[T](path: String, json: Iterator[Char], filters: List[Option[Any]]): T = {
-    reduceRead[T](path, JSONParser(json).parser(), filters)
-  }
-
-  def reduceRead[T](path: String, json: JSONType, filters: List[Option[Any]]): T = {
-    reduce(read(path, json, filters)).asInstanceOf[T]
-  }
-
-  def reduceRead[T](path: Path): T = {
-    reduceRead[T](path.build)
-  }
-
-  def reduceRead[T](path: Path, json: String): T = {
-    reduceRead[T](path.build, json)
-  }
-
-  def reduceRead[T](path: Path, json: Iterator[Char]): T = {
-    reduceRead[T](path.build, json)
-  }
-
-  def reduceRead[T](path: Path, json: JSONType): T = {
-    reduceRead[T](path.build, json)
-  }
-
-  private def read[T](path: List[Rule]): T = {
+  private def read[T](path: List[Rule]): Option[T] = {
     require(json != None, "json is None")
     read[T](path, json.get)
   }
 
-  private def read[T](path: List[Rule], json: String): T = {
+  private def read[T](path: List[Rule], json: String): Option[T] = {
     read[T](path, JSONParser(json).parser())
   }
 
-  private def read[T](path: List[Rule], json: Iterator[Char]): T = {
+  private def read[T](path: List[Rule], json: Iterator[Char]): Option[T] = {
     read[T](path, JSONParser(json).parser())
   }
 
-  private def read[T](rules: List[Rule], json: JSONType): T = {
+  private def read[T](rules: List[Rule], json: JSONType): Option[T] = {
     var temp: Any = json
     rules.foreach(rule => temp = solver(rule, temp))
-    temp.asInstanceOf[T]
-  }
-
-  private def reduceRead[T](path: List[Rule]): T = {
-    reduce(read(path)).asInstanceOf[T]
-  }
-
-  private def reduceRead[T](path: List[Rule], json: String): T = {
-    reduceRead[T](path, JSONParser(json).parser())
-  }
-
-  private def reduceRead[T](path: List[Rule], json: Iterator[Char]): T = {
-    reduceRead[T](path, JSONParser(json).parser())
-  }
-
-  private def reduceRead[T](path: List[Rule], json: JSONType): T = {
-    reduce(read(path, json)).asInstanceOf[T]
+    reduce(temp).asInstanceOf[T] match {
+      case NotFound => None
+      case obj => Some(obj)
+    }
   }
 
   private def merge(rules: List[Rule], list: List[Option[Any]]): List[Rule] = {
@@ -606,18 +547,18 @@ private[moilioncircle] class JSONPointer {
         rule.ruleType match {
           case RuleType.TOKEN =>
             val str = rule.rule
-            jsonObj.map.getOrElse(str, NotFound)
+            jsonObj.obj.getOrElse(str, NotFound)
           case RuleType.SPLIT =>
-            rule.splits.map(jsonObj.map.getOrElse(_, NotFound))
+            rule.splits.map(jsonObj.obj.getOrElse(_, NotFound))
           case RuleType.WILDCARD =>
             rule.filter match {
               case Some(f) =>
                 try {
-                  jsonObj.map.keys.filter(f.asInstanceOf[String => Boolean](_)).map(jsonObj.map(_)).toList
+                  jsonObj.obj.keys.filter(f.asInstanceOf[String => Boolean](_)).map(jsonObj.obj(_)).toList
                 } catch {
                   case e: ClassCastException => NotFound
                 }
-              case None => jsonObj.map.values.toList
+              case None => jsonObj.obj.values.toList
               case _ => NotFound
             }
         }

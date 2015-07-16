@@ -5,11 +5,11 @@
 
 This is an implementation of JSON pointer[(RFC 6901)](http://tools.ietf.org/html/rfc6901) in Scala which extends  
 JSON pointer syntax(add another three keywords `:` `,` `*`).  
-This library support 2 ways to access JSON notation data. `string path parser` and `scala DSL`  
+This library support 2 ways to access JSON notation data. `String path parser` and `Scala DSL`  
 
 ## Syntax
 
-#### string path parser:  
+#### String path parser:  
 
 Here is a list of supported operators :   
 
@@ -46,14 +46,14 @@ val json =
         |]
       """.stripMargin
       
-val value6 = JSONPointer().reduceRead[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
-assert(value6 === List(List(1.233E-10, true, null), List(true, 1.23)))
+val value6 = JSONPointer().read[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
+assert(value6 === Some(List(List(1.233E-10, true, null), List(true, 1.23))))
 
-val value7 = JSONPointer().reduceRead[Any]("/-3/1", json)
-assert(value7 === NotFound)
+val value7 = JSONPointer().read[Any]("/-3/1", json)
+assert(value7 === None)
 ```
 
-#### scala DSL:
+#### Scala DSL:
 
 Code example:
 
@@ -82,25 +82,25 @@ val json =
       """.stripMargin
 
 val value0 = JSONPointer().read[List[Any]](new Path / -3 /("bcd", ""), json)
-assert(value0 === List(true, 1.233E-10))
+assert(value0 === Some(List(true, 1.233E-10)))
 
-val value1 = JSONPointer().reduceRead[List[Any]](new Path / * /(*, (e: String) => e.contains("b")), json)
-assert(value1 === List(List(1.233E-10, true, null), List(true, 1.23)))
+val value1 = JSONPointer().read[List[Any]](new Path / * /(*, (e: String) => e.contains("b")), json)
+assert(value1 === Some(List(List(1.233E-10, true, null), List(true, 1.23))))
 
-val value2 = JSONPointer().reduceRead[Any](new Path / (1 -> -1) /(*, (_: String) == "b"), json)
-assert(value2 === List(null, 1.23))
+val value2 = JSONPointer().read[Any](new Path / (1 -> -1) /(*, (_: String) == "b"), json)
+assert(value2 === Some(List(null, 1.23)))
     
 val value3 = JSONPointer().read[Boolean](new Path / -3 /"bcd", json)
-assert(value3 === true)
+assert(value3 === Some(true))
     
-val value4 = JSONPointer().reduceRead[List[Any]](new Path /(*, _ < _ -1), json)
-assert(value4 === List(JSONArray(List(true, false, null)), JSONObject(Map("abc" -> 1.233E-10, "bcd" -> true, "b" -> null)),JSONObject(Map( ""-> 1.233E-10, "bcd" -> true, "b" -> 1.23)), false))
+val value4 = JSONPointer().read[List[Any]](new Path /(*, _ < _ -1), json)
+assert(value4 === Some(List(JSONArray(List(true, false, null)), JSONObject(Map("abc" -> 1.233E-10, "bcd" -> true, "b" -> null)),JSONObject(Map( ""-> 1.233E-10, "bcd" -> true, "b" -> 1.23)), false)))
 
 ```
 
 ## Escape  
 
-#### string path parser:  
+#### String path parser:  
 
 | *Character* | *Escape*                       | *Example*                   |
 | ----------- | ------------------------------ | --------------------------- |
@@ -117,9 +117,9 @@ val path = s"/*/${quote("*")}/${quote("abc,bcd")}"
 ```
 The `path` will compile to string `/*/~*/abc~,bcd`  
 
-#### scala DSL:
+#### Scala DSL:
 
-When you are using `scala DSL`.you don't need escape any character.  
+When you are using `Scala DSL`.you don't need escape any character.  
 For example:  
 ```scala
 val path = new Path / * / "*" / "abc,bcd"
@@ -137,16 +137,16 @@ We provided three filters.two of them used on `JSONArray`.another one used on `J
 `(Int,Int)=>Boolean` : first `Int` represents `JSONArray` index.and second `Int` represents `JSONArray` size.  
 `String=>Boolean` : `String` represents `JSONObject` key.  
 
-#### string path parser:
+#### String path parser:
 
 ```scala
-JSONPointer().reduceRead[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
+JSONPointer().read[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
 ```
 You **MUST** add two filters to the path above.because this path contains two `*`.  
 First filter is `None`.represents filter all things.  
 Second filter is `Some((e: String) => e.contains("b"))`.represents filter that `key` contains string `"b"`.  
 
-#### scala DSL:  
+#### Scala DSL:  
 ```scala
 new Path / * /(*, (e: String) => e.contains("b"))
 ```
