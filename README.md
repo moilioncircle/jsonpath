@@ -46,11 +46,11 @@ val json =
         |]
       """.stripMargin
       
-val value6 = JSONPointer().reduceRead[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
-assert(value6 === List(List(1.233E-10, true, null), List(true, 1.23)))
+val value6 = JSONPointer().read[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
+assert(value6 === Some(List(List(1.233E-10, true, null), List(true, 1.23))))
 
-val value7 = JSONPointer().reduceRead[Any]("/-3/1", json)
-assert(value7 === NotFound)
+val value7 = JSONPointer().read[Any]("/-3/1", json)
+assert(value7 === None)
 ```
 
 #### Scala DSL:
@@ -82,19 +82,19 @@ val json =
       """.stripMargin
 
 val value0 = JSONPointer().read[List[Any]](new Path / -3 /("bcd", ""), json)
-assert(value0 === List(true, 1.233E-10))
+assert(value0 === Some(List(true, 1.233E-10)))
 
-val value1 = JSONPointer().reduceRead[List[Any]](new Path / * /(*, (e: String) => e.contains("b")), json)
-assert(value1 === List(List(1.233E-10, true, null), List(true, 1.23)))
+val value1 = JSONPointer().read[List[Any]](new Path / * /(*, (e: String) => e.contains("b")), json)
+assert(value1 === Some(List(List(1.233E-10, true, null), List(true, 1.23))))
 
-val value2 = JSONPointer().reduceRead[Any](new Path / (1 -> -1) /(*, (_: String) == "b"), json)
-assert(value2 === List(null, 1.23))
+val value2 = JSONPointer().read[Any](new Path / (1 -> -1) /(*, (_: String) == "b"), json)
+assert(value2 === Some(List(null, 1.23)))
     
 val value3 = JSONPointer().read[Boolean](new Path / -3 /"bcd", json)
-assert(value3 === true)
+assert(value3 === Some(true))
     
-val value4 = JSONPointer().reduceRead[List[Any]](new Path /(*, _ < _ -1), json)
-assert(value4 === List(JSONArray(List(true, false, null)), JSONObject(Map("abc" -> 1.233E-10, "bcd" -> true, "b" -> null)),JSONObject(Map( ""-> 1.233E-10, "bcd" -> true, "b" -> 1.23)), false))
+val value4 = JSONPointer().read[List[Any]](new Path /(*, _ < _ -1), json)
+assert(value4 === Some(List(JSONArray(List(true, false, null)), JSONObject(Map("abc" -> 1.233E-10, "bcd" -> true, "b" -> null)),JSONObject(Map( ""-> 1.233E-10, "bcd" -> true, "b" -> 1.23)), false)))
 
 ```
 
@@ -140,7 +140,7 @@ We provided three filters.two of them used on `JSONArray`.another one used on `J
 #### String path parser:
 
 ```scala
-JSONPointer().reduceRead[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
+JSONPointer().read[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
 ```
 You **MUST** add two filters to the path above.because this path contains two `*`.  
 First filter is `None`.represents filter all things.  

@@ -45,31 +45,32 @@ class JSONPathUserCase extends FunSuite {
       """.stripMargin
 
     val value = JSONPointer().read[List[Any]](new Path / -3 /("bcd", ""), json)
-    assert(value === List(true, 1.233E-10))
+    assert(value === Some(List(true, 1.233E-10)))
 
-    val value1 = JSONPointer().reduceRead[List[Any]](new Path / * /(*, (e: String) => e.contains("b")), json)
-    assert(value1 === List(List(1.233E-10, true, null), List(true, 1.23)))
+    val value1 = JSONPointer().read[List[Any]](new Path / * /(*, (e: String) => e.contains("b")), json)
+    assert(value1 === Some(List(List(1.233E-10, true, null), List(true, 1.23))))
 
-    val value2 = JSONPointer().reduceRead[Any](new Path / (1 -> -1) /(*, (_: String) == "b"), json)
-    assert(value2 === List(null, 1.23))
+    val value2 = JSONPointer().read[Any](new Path / (1 -> -1) /(*, (_: String) == "b"), json)
+    assert(value2 === Some(List(null, 1.23)))
 
-    val value3 = JSONPointer().reduceRead[List[Any]](new Path /(*, (e: Int, size: Int) => e > 5 && e < size), json).filterNot(_ match {
+    val value3 = JSONPointer().read[List[Any]](new Path /(*, (e: Int, size: Int) => e > 5 && e < size), json).get.filterNot(_ match {
       case e: JSONArray => true
       case e: JSONObject => true
       case _ => false
     })
     assert(value3 === List(1.1E14, 1.1E-10, 3, -100, false, null))
 
-    val value4 = JSONPointer().reduceRead[Any](new Path / -1, json)
-    assert(value4 === null)
+    val value4 = JSONPointer().read[Any](new Path / -1, json)
+    assert(value4 === Some(null))
 
-    val value5 = JSONPointer().reduceRead[List[Any]](new Path /(*, _ < _ - 8), json)
-    assert(value5 === List(1.55E14, 0.55, 0, 9, 100, 1.1E14, 1.1E14))
+    val value5 = JSONPointer().read[List[Any]](new Path /(*, _ < _ - 8), json)
+    assert(value5 === Some(List(1.55E14, 0.55, 0, 9, 100, 1.1E14, 1.1E14)))
 
-    val value6 = JSONPointer().reduceRead[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
-    assert(value6 === List(List(1.233E-10, true, null), List(true, 1.23)))
+    val value6 = JSONPointer().read[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
+    assert(value6 === Some(List(List(1.233E-10, true, null), List(true, 1.23))))
 
-    val value7 = JSONPointer().reduceRead[Any]("/-3/1", json)
-    assert(value7 === NotFound)
+    val value7 = JSONPointer().read[Any]("/-3/1", json)
+    assert(value7 === None)
   }
 }
+
