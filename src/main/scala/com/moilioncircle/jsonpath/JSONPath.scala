@@ -262,9 +262,11 @@ object Path {
  * JSON Pointer implementation
  */
 object JSONPointer {
-  def apply(json: String): JSONPointer = new JSONPointer(json)
+  def apply(json: String): JSONPointer = new JSONPointer(Some(JSONParser(json).parser()))
 
-  def apply(): JSONPointer = new JSONPointer
+  def apply(json: Iterator[Char]): JSONPointer = new JSONPointer(Some(JSONParser(json).parser()))
+
+  def apply(): JSONPointer = new JSONPointer(None)
 }
 
 private[moilioncircle] case class Rule(rule: String, ruleType: RuleType = RuleType.TOKEN, filter: Option[Any] = None, splits: List[String] = List.empty[String])
@@ -275,12 +277,11 @@ private[moilioncircle] object RuleType extends Enumeration {
 }
 
 private[moilioncircle] object JSONPointerParser {
-  def apply(str: String): JSONPointerParser = new JSONPointerParser(str)
+  def apply(json: String): JSONPointerParser = new JSONPointerParser(json.iterator)
 }
 
-private[moilioncircle] class JSONPointerParser(str: String) {
+private[moilioncircle] class JSONPointerParser(it: Iterator[Char]) {
 
-  private val it: Iterator[Char] = str.iterator
   private var backBuffer = List.empty[Char]
 
   def parsePath(): List[Rule] = {
@@ -394,16 +395,9 @@ private[moilioncircle] class JSONPointerParser(str: String) {
   }
 }
 
-private[moilioncircle] class JSONPointer {
+private[moilioncircle] class JSONPointer(json: Option[JsValue]) {
   private type ArrayFilter = Int => Boolean
   private type ObjectFilter = String => Boolean
-
-  def this(str: String) {
-    this()
-    json = Some(JSONParser(str).parser())
-  }
-
-  private var json: Option[JsValue] = None
 
   def read[T](path: String): Option[T] = {
     require(json != None, "json is None")
@@ -420,7 +414,7 @@ private[moilioncircle] class JSONPointer {
 
   def read[T](path: String, json: JsValue): Option[T] = {
     val rules = JSONPointerParser(path).parsePath()
-    read[T](merge(rules, List.empty), json)
+    read[T](mergeFilter(rules, List.empty), json)
   }
 
   def read[T](path: String, filters: List[Option[Any]]): Option[T] = {
@@ -438,7 +432,7 @@ private[moilioncircle] class JSONPointer {
 
   def read[T](path: String, json: JsValue, filters: List[Option[Any]]): Option[T] = {
     val rules = JSONPointerParser(path).parsePath()
-    read[T](merge(rules, filters), json)
+    read[T](mergeFilter(rules, filters), json)
   }
 
   def read[T](path: Path): Option[T] = {
@@ -484,7 +478,7 @@ private[moilioncircle] class JSONPointer {
     }
   }
 
-  private def merge(rules: List[Rule], list: List[Option[Any]]): List[Rule] = {
+  private def mergeFilter(rules: List[Rule], list: List[Option[Any]]): List[Rule] = {
     var temp = list
     if (list.isEmpty) {
       rules

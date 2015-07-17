@@ -24,29 +24,19 @@ import spray.json._
 import scala.annotation.switch
 
 object JSONParser {
-  def apply(json: String): JSONParser = new JSONParser(json)
+  def apply(json: String): JSONParser = new JSONParser(json.iterator)
 
-  def apply(jsonIterator: Iterator[Char]): JSONParser = new JSONParser(jsonIterator)
+  def apply(json: Iterator[Char]): JSONParser = new JSONParser(json)
 }
 
-class JSONParser {
-  def this(json: String) {
-    this()
-    it = json.iterator
-  }
+class JSONParser(it: Iterator[Char]) {
 
-  def this(json: Iterator[Char]) {
-    this()
-    it = json
-  }
-
-  private var it: Iterator[Char] = _
   private var column: Int = 0
   private var row: Int = 0
   private var backChar: Option[(Char, Int, Int)] = None
   private val sb: StringBuilder = new StringBuilder
 
-  def parser() = {
+  def parser(): JsValue = {
     try {
       next() match {
         case '{' => JsObject(parseObject())
