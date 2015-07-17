@@ -18,11 +18,14 @@ package com.moilioncircle.jsonpath
 /**
  * Created by leon on 15-6-21.
  */
+
 abstract class JSONType
 
 case class JSONObject(obj: Map[String, _]) extends JSONType
 
 case class JSONArray(list: List[_]) extends JSONType
+
+import scala.annotation.switch
 
 object JSONParser {
   def apply(json: String): JSONParser = new JSONParser(json)
@@ -44,116 +47,118 @@ class JSONParser {
   private var it: Iterator[Char] = _
   private var column: Int = 0
   private var row: Int = 0
-  private var backBuffer = List.empty[Char]
-  private var backCharPosition = List.empty[(Int, Int)]
+  private var backChar: Option[(Char, Int, Int)] = None
+  private val sb: StringBuilder = new StringBuilder
 
-  def parser(): JSONType = {
-    next() match {
-      case '{' => parseObject()
-      case '[' => parseArray()
-      case e => throw JSONSyntaxException(s"excepted ['[' , '{'] but '$e' at row $row,column $column")
+  def parser() = {
+    try {
+      next() match {
+        case '{' => JSONObject(parseObject())
+        case '[' => JSONArray(parseArray())
+        case e => throw JSONSyntaxException(s"excepted ['[' , '{'] but '$e' at row $row,column $column")
+      }
+    } catch {
+      case e: NoSuchElementException => throw JSONSyntaxException(s"excepted a char but stream ended at row $row,column $column")
     }
   }
 
-  private def parseObject(): JSONObject = {
-    var map = Map.empty[String, Any]
+  private def parseObject(): Map[String, Any] = {
+    var map = Map.newBuilder[String, Any]
     next() match {
-      case '}' => JSONObject(map)
+      case '}' => map.result()
       case c =>
-        back(c)
-        map += parseItem()
+        map += (c match {
+          case '"' =>
+            val key = parseString()
+            next() match {
+              case ':' => (key, parseValue(next()))
+              case e => throw JSONSyntaxException(s"excepted ':' but '$e' at row $row,column $column")
+            }
+          case e => throw JSONSyntaxException(s"excepted string but '$e' at row $row,column $column")
+        })
         next() match {
           case ',' =>
-            back(',')
-            var ch = next()
+            var ch = ','
             while (ch == ',') {
-              map += parseItem()
+              map += (next() match {
+                case '"' =>
+                  val key = parseString()
+                  next() match {
+                    case ':' => (key, parseValue(next()))
+                    case e => throw JSONSyntaxException(s"excepted ':' but '$e' at row $row,column $column")
+                  }
+                case e => throw JSONSyntaxException(s"excepted string but '$e' at row $row,column $column")
+              })
               ch = next()
             }
             ch match {
               case '}' =>
-                JSONObject(map)
+                map.result()
               case e => throw JSONSyntaxException(s"excepted '}' but '$e' at row $row,column $column")
             }
           case '}' =>
-            JSONObject(map)
+            map.result()
           case e => throw JSONSyntaxException(s"excepted [',' , '}'] but '$e' at row $row,column $column")
         }
     }
   }
 
-  private def parseArray(): JSONArray = {
-    var list = List.empty[Any]
+  private def parseArray(): List[Any] = {
+    var list = List.newBuilder[Any]
     next() match {
       case ']' =>
-        JSONArray(list)
+        list.result()
       case ch =>
-        back(ch)
-        list = list :+ parseValue()
+        list += parseValue(ch)
         next() match {
           case ',' =>
-            back(',')
-            var ch = next()
+            var ch = ','
             while (ch == ',') {
-              list = list :+ parseValue()
+              list += parseValue(next())
               ch = next()
             }
             ch match {
               case ']' =>
-                JSONArray(list)
+                list.result()
               case e => throw JSONSyntaxException(s"excepted ']' but '$e' at row $row,column $column")
             }
           case ']' =>
-            JSONArray(list)
+            list.result()
           case e => throw JSONSyntaxException(s"excepted [',' , ']'] but '$e' at row $row,column $column")
         }
     }
   }
 
-  private def parseValue(): Any = {
-    next() match {
+  private def parseValue(ch: Char): Any = {
+    (ch: @switch) match {
       case '"' =>
-        back('"')
         parseString()
+      case n@('0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '-') =>
+        scala.BigDecimal(parseNumber(n))
       case 't' =>
-        back('t')
-        parseTrue()
+        parseTrue(ch)
+        true
       case 'f' =>
-        back('f')
-        parseFalse()
+        parseFalse(ch)
+        false
       case 'n' =>
-        back('n')
-        parseNull()
+        parseNull(ch)
+        null
       case '{' =>
-        parseObject()
+        JSONObject(parseObject())
       case '[' =>
-        parseArray()
-      case n if (n == '-' || (n >= '0' && n <= '9')) =>
-        back(n)
-        parseNumber()
+        JSONArray(parseArray())
       case e => throw JSONSyntaxException(s"excepted [string , number , null , true , false , jsonObject , jsonArray] but '$e' at row $row,column $column")
     }
   }
 
-  private def parseItem(): (String, Any) = {
-    next() match {
-      case '"' =>
-        back('"')
-        val key = parseString()
-        next() match {
-          case ':' => (key, parseValue())
-          case e => throw JSONSyntaxException(s"excepted ':' but '$e' at row $row,column $column")
-        }
-      case e => throw JSONSyntaxException(s"excepted string but '$e' at row $row,column $column")
-    }
-  }
-
-  private def parseNull(): Any = {
-    nextChar() match {
+  @inline
+  private def parseNull(ch: Char): Unit = {
+    ch match {
       case 'n' => nextChar() match {
         case 'u' => nextChar() match {
           case 'l' => nextChar() match {
-            case 'l' => null
+            case 'l' =>
             case e => throw JSONLexerException(s"excepted null but '$e' at row $row,column $column")
           }
           case e => throw JSONLexerException(s"excepted null but $e at row $row,column $column")
@@ -163,13 +168,14 @@ class JSONParser {
     }
   }
 
-  private def parseFalse(): Boolean = {
-    nextChar() match {
+  @inline
+  private def parseFalse(ch: Char): Unit = {
+    ch match {
       case 'f' => nextChar() match {
         case 'a' => nextChar() match {
           case 'l' => nextChar() match {
             case 's' => nextChar() match {
-              case 'e' => false
+              case 'e' =>
               case e => throw JSONLexerException(s"excepted false but '$e' at row $row,column $column")
             }
             case e => throw JSONLexerException(s"excepted false but '$e' at row $row,column $column")
@@ -181,12 +187,13 @@ class JSONParser {
     }
   }
 
-  private def parseTrue(): Boolean = {
-    nextChar() match {
+  @inline
+  private def parseTrue(ch: Char): Unit = {
+    ch match {
       case 't' => nextChar() match {
         case 'r' => nextChar() match {
           case 'u' => nextChar() match {
-            case 'e' => true
+            case 'e' =>
             case e => throw JSONLexerException(s"excepted true but '$e' at row $row,column $column")
           }
           case e => throw JSONLexerException(s"excepted true but '$e' at row $row,column $column")
@@ -196,69 +203,68 @@ class JSONParser {
     }
   }
 
+  @inline
   private def parseString(): String = {
-    val sb: StringBuilder = new StringBuilder
-    nextChar()
-    var ch = nextChar()
-    while (ch != '"') {
-      ch match {
+    sb.setLength(0)
+    var next = nextChar()
+    while (next != '"') {
+      (next: @switch) match {
         case '\\' =>
-          ch = nextChar()
-          ch match {
+          next = nextChar()
+          next match {
             case '"' =>
               sb.append('\"')
-              ch = nextChar()
+              next = nextChar()
             case '\\' =>
               sb.append('\\')
-              ch = nextChar()
+              next = nextChar()
             case '/' =>
               sb.append('/')
-              ch = nextChar()
+              next = nextChar()
             case 'b' =>
               sb.append('\b')
-              ch = nextChar()
+              next = nextChar()
             case 'f' =>
               sb.append('\f')
-              ch = nextChar()
+              next = nextChar()
             case 'F' =>
               sb.append('\f')
-              ch = nextChar()
+              next = nextChar()
             case 'n' =>
               sb.append('\n')
-              ch = nextChar()
+              next = nextChar()
             case 'r' =>
               sb.append('\r')
-              ch = nextChar()
+              next = nextChar()
             case 't' =>
               sb.append('\t')
-              ch = nextChar()
+              next = nextChar()
             case 'u' =>
-              val u1 = nextChar()
-              val u2 = nextChar()
-              val u3 = nextChar()
-              val u4 = nextChar()
-              val s = Integer.valueOf(new String(Array(u1, u2, u3, u4)), 16).toChar
+              val s = Integer.valueOf(new String(Array(nextChar(), nextChar(), nextChar(), nextChar())), 16).toChar
               sb.append(s)
-              ch = nextChar()
+              next = nextChar()
             case e =>
               sb.append('\\')
               sb.append(e)
-              ch = nextChar()
+              next = nextChar()
           }
         case e =>
-          sb.append(ch)
-          ch = nextChar()
+          sb.append(next)
+          next = nextChar()
       }
     }
     sb.toString()
   }
 
-  private def parseNumber(): AnyVal = {
-    val sb = new StringBuilder
-    var next = nextChar()
-    if (next == '-') {
-      sb.append('-')
-      next = nextChar()
+  @inline
+  private def parseNumber(ch: Char): String = {
+    sb.setLength(0)
+    var next = ch
+    next match {
+      case '-' =>
+        sb.append('-')
+        next = nextChar()
+      case _ =>
     }
     next match {
       case '0' =>
@@ -272,36 +278,32 @@ class JSONParser {
         }
     }
 
-    if (next == '.' || next == 'e' || next == 'E') {
-      if (next == '.') {
+    next match {
+      case '.' =>
         sb.append(next)
         next = nextChar()
         while (parseDigit(next, sb)) {
           next = nextChar()
         }
-      }
-      if (next == 'e' || next == 'E') {
+      case _ =>
+    }
+
+    if (next == 'e' || next == 'E') {
+      sb.append(next)
+      next = nextChar()
+      if (next == '+' || next == '-') {
         sb.append(next)
         next = nextChar()
-        if (next == '+' || next == '-') {
-          sb.append(next)
-          next = nextChar()
-        }
-        while (parseDigit(next, sb)) {
-          next = nextChar()
-        }
       }
-      back(next)
-      sb.toString.toDouble
-    } else {
-      back(next)
-      sb.toString.toLong match {
-        case value if value >= Int.MinValue && value <= Int.MaxValue => sb.toString.toInt
-        case value => value
+      while (parseDigit(next, sb)) {
+        next = nextChar()
       }
     }
+    back(next)
+    sb.toString
   }
 
+  @inline
   private def parseDigit(c: Char, sb: StringBuilder): Boolean = {
     c match {
       case c if c >= '0' && c <= '9' =>
@@ -312,52 +314,41 @@ class JSONParser {
     }
   }
 
+  @inline
   private def nextChar(): Char = {
-    if (backBuffer.nonEmpty) {
-      column = backCharPosition.head._1
-      row = backCharPosition.head._2
-      backCharPosition = backCharPosition.tail
-      val c = backBuffer.head
-      backBuffer = backBuffer.tail
+    if (backChar.nonEmpty) {
+      column = backChar.get._2
+      row = backChar.get._3
+      val c = backChar.get._1
+      backChar = None
       c
     } else {
       column += 1
-      if (it.hasNext) {
-        it.next()
-      } else {
-        throw JSONSyntaxException(s"excepted a char but stream ended at row $row,column $column")
-      }
+      it.next()
     }
   }
 
+  @inline
   private def next(): Char = {
-    if (backBuffer.nonEmpty) {
-      column = backCharPosition.head._1
-      row = backCharPosition.head._2
-      backCharPosition = backCharPosition.tail
-      val c = backBuffer.head
-      backBuffer = backBuffer.tail
+    if (backChar.nonEmpty) {
+      column = backChar.get._2
+      row = backChar.get._3
+      val c = backChar.get._1
+      backChar = None
       c
     } else {
-      if (it.hasNext) {
-        var c = it.next()
-        while (ignoreLetter(c)) {
-          if (it.hasNext) {
-            c = it.next()
-          } else {
-            throw JSONSyntaxException(s"excepted a char but stream ended at row $row,column $column")
-          }
-        }
-        column += 1
-        c
-      } else {
-        throw JSONSyntaxException(s"excepted a char but stream ended  at row $row,column $column")
+      var c = it.next()
+      while (ignoreLetter(c)) {
+        c = it.next()
       }
+      column += 1
+      c
     }
   }
 
+  @inline
   private def ignoreLetter(c: Char): Boolean = {
-    c match {
+    (c: @switch) match {
       case ' ' =>
         column += 1
         true
@@ -375,13 +366,13 @@ class JSONParser {
     }
   }
 
+  @inline
   private def back(char: Char): Unit = {
     var c = char
     while (ignoreLetter(c)) {
       c = it.next()
     }
     column += 1
-    backBuffer = backBuffer :+ c
-    backCharPosition = backCharPosition :+(column, row)
+    backChar = Some((c, column, row))
   }
 }
