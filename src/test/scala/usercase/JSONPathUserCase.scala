@@ -4,6 +4,7 @@ import com.moilioncircle.jsonpath._
 import org.junit.runner.RunWith
 import org.scalatest.FunSuite
 import org.scalatest.junit.JUnitRunner
+import spray.json._
 
 /**
  * Created by leon on 15-6-24.
@@ -45,29 +46,29 @@ class JSONPathUserCase extends FunSuite {
       """.stripMargin
 
     val value = JSONPointer().read[List[Any]](new Path / -3 /("bcd", ""), json)
-    assert(value === Some(List(true, 1.233E-10)))
+    assert(value === Some(List(JsTrue, JsNumber(1.233E-10))))
 
     val value1 = JSONPointer().read[List[Any]](new Path / * /(*, (e: String) => e.contains("b")), json)
-    assert(value1 === Some(List(List(1.233E-10, true, null), List(true, 1.23))))
+    assert(value1 === Some(List(List(JsNumber(1.233E-10), JsTrue, JsNull), List(JsTrue, JsNumber(1.23)))))
 
     val value2 = JSONPointer().read[Any](new Path / (1 -> -1) /(*, (_: String) == "b"), json)
-    assert(value2 === Some(List(null, 1.23)))
+    assert(value2 === Some(List(JsNull, JsNumber(1.23))))
 
     val value3 = JSONPointer().read[List[Any]](new Path /(*, (e: Int, size: Int) => e > 5 && e < size), json).get.filterNot(_ match {
-      case e: JSONArray => true
-      case e: JSONObject => true
+      case e: JsArray => true
+      case e: JsObject => true
       case _ => false
     })
-    assert(value3 === List(1.1E14, 1.1E-10, 3, -100, false, null))
+    assert(value3 === List(JsNumber(1.1E14), JsNumber(1.1E-10), JsNumber(3), JsNumber(-100), JsBoolean(false), JsNull))
 
     val value4 = JSONPointer().read[Any](new Path / -1, json)
-    assert(value4 === Some(null))
+    assert(value4 === Some(JsNull))
 
     val value5 = JSONPointer().read[List[Any]](new Path /(*, _ < _ - 8), json)
-    assert(value5 === Some(List(1.55E14, 0.55, 0, 9, 100, 1.1E14, 1.1E14)))
+    assert(value5 === Some(List(JsNumber(1.55E14), JsNumber(0.55), JsNumber(0), JsNumber(9), JsNumber(100), JsNumber(1.1E14), JsNumber(1.1E14))))
 
     val value6 = JSONPointer().read[List[Any]]("/*/*", json, List(None, Some((e: String) => e.contains("b"))))
-    assert(value6 === Some(List(List(1.233E-10, true, null), List(true, 1.23))))
+    assert(value6 === Some(List(List(JsNumber(1.233E-10), JsTrue, JsNull), List(JsTrue, JsNumber(1.23)))))
 
     val value7 = JSONPointer().read[Any]("/-3/1", json)
     assert(value7 === None)
