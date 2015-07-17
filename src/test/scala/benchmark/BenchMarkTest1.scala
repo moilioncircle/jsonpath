@@ -23,10 +23,10 @@ class BenchMarkTest1 extends FunSuite {
     val user: String = Source.fromInputStream(ClassLoader.getSystemResourceAsStream("user.json")).mkString
     val start = System.currentTimeMillis()
     for (i <- 1 to 20) {
-      JSONParser(citys).parser()
-      JSONParser(repos).parser()
-      JSONParser(request).parser()
-      JSONParser(user).parser()
+      JSONParser(citys).parse()
+      JSONParser(repos).parse()
+      JSONParser(request).parse()
+      JSONParser(user).parse()
     }
     println("1:" + (System.currentTimeMillis() - start))
   }

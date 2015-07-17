@@ -28,7 +28,7 @@ package com.moilioncircle.jsonpath
  * "": 0,
  * "a/b": 1,
  * "c%d": 2,
- * "e^f": 3,
+ * "e&#94;f": 3,
  * "g|h": 4,
  * "i\\j": 5,
  * "k\"l": 6,
@@ -44,7 +44,7 @@ package com.moilioncircle.jsonpath
  * "/"          0
  * "/a~1b"      1
  * "/c%d"       2
- * "/e^f"       3
+ * "/e&#94;f"       3
  * "/g|h"       4
  * "/i\\j"      5
  * "/k\"l"      6
@@ -262,9 +262,9 @@ object Path {
  * JSON Pointer implementation
  */
 object JSONPointer {
-  def apply(json: String): JSONPointer = new JSONPointer(Some(JSONParser(json).parser()))
+  def apply(json: String): JSONPointer = new JSONPointer(Some(JSONParser(json).parse()))
 
-  def apply(json: Iterator[Char]): JSONPointer = new JSONPointer(Some(JSONParser(json).parser()))
+  def apply(json: Iterator[Char]): JSONPointer = new JSONPointer(Some(JSONParser(json).parse()))
 
   def apply(): JSONPointer = new JSONPointer(None)
 }
@@ -405,11 +405,11 @@ private[moilioncircle] class JSONPointer(json: Option[JsValue]) {
   }
 
   def read[T](path: String, json: String): Option[T] = {
-    read[T](path, JSONParser(json).parser(), List.empty)
+    read[T](path, JSONParser(json).parse(), List.empty)
   }
 
   def read[T](path: String, json: Iterator[Char]): Option[T] = {
-    read[T](path, JSONParser(json).parser(), List.empty)
+    read[T](path, JSONParser(json).parse(), List.empty)
   }
 
   def read[T](path: String, json: JsValue): Option[T] = {
@@ -423,11 +423,11 @@ private[moilioncircle] class JSONPointer(json: Option[JsValue]) {
   }
 
   def read[T](path: String, json: String, filters: List[Option[Any]]): Option[T] = {
-    read[T](path, JSONParser(json).parser(), filters)
+    read[T](path, JSONParser(json).parse(), filters)
   }
 
   def read[T](path: String, json: Iterator[Char], filters: List[Option[Any]]): Option[T] = {
-    read[T](path, JSONParser(json).parser(), filters)
+    read[T](path, JSONParser(json).parse(), filters)
   }
 
   def read[T](path: String, json: JsValue, filters: List[Option[Any]]): Option[T] = {
@@ -457,11 +457,11 @@ private[moilioncircle] class JSONPointer(json: Option[JsValue]) {
   }
 
   private def read[T](path: List[Rule], json: String): Option[T] = {
-    read[T](path, JSONParser(json).parser())
+    read[T](path, JSONParser(json).parse())
   }
 
   private def read[T](path: List[Rule], json: Iterator[Char]): Option[T] = {
-    read[T](path, JSONParser(json).parser())
+    read[T](path, JSONParser(json).parse())
   }
 
   private def read[T](rules: List[Rule], json: JsValue): Option[T] = {

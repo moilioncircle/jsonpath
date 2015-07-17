@@ -36,7 +36,7 @@ class JSONParser(it: Iterator[Char]) {
   private var backChar: Option[(Char, Int, Int)] = None
   private val sb: StringBuilder = new StringBuilder
 
-  def parser(): JsValue = {
+  def parse(): JsValue = {
     try {
       next() match {
         case '{' => JsObject(parseObject())
@@ -194,10 +194,10 @@ class JSONParser(it: Iterator[Char]) {
     sb.setLength(0)
     var next = nextChar()
     while (next != '"') {
-      (next: @switch) match {
+      next match {
         case '\\' =>
           next = nextChar()
-          next match {
+          (next : @switch) match {
             case '"' =>
               sb.append('\"')
               next = nextChar()
