@@ -12,14 +12,14 @@ class JSONPathTest extends FunSuite {
   test("json parser 10") {
     val json = "[\"\\u9648\"]"
     val parser = JSONParser(json)
-    val value = parser.parser()
+    val value = parser.parse()
     assert(value == JSONArray(List("陈")))
 
     {
       val json = "[\"\\u964"
       val parser = JSONParser(json)
       try {
-        parser.parser()
+        parser.parse()
         fail()
       } catch {
         case e: JSONSyntaxException =>
@@ -30,7 +30,7 @@ class JSONPathTest extends FunSuite {
       val json = ""
       val parser = JSONParser(json)
       try {
-        parser.parser()
+        parser.parse()
         fail()
       } catch {
         case e: JSONSyntaxException =>
@@ -61,7 +61,7 @@ class JSONPathTest extends FunSuite {
         |]
       """.stripMargin
     val parser = JSONParser(json)
-    parser.parser() match {
+    parser.parse() match {
       case JSONArray(list: List[Any]) => assert(list.toString === "List(1.55E+14, 2, 3, JSONArray(List(true, false, null)), JSONObject(Map(a陈bc -> 1.233E-10, bcd -> true, c\rde -> null)), true, false, null)")
     }
   }
@@ -97,7 +97,7 @@ class JSONPathTest extends FunSuite {
       """.stripMargin
     val parser = JSONParser(json)
     try {
-      parser.parser()
+      parser.parse()
       fail()
     } catch {
       case e: JSONLexerException => //pass test
@@ -128,7 +128,7 @@ class JSONPathTest extends FunSuite {
       """.stripMargin
     val parser = JSONParser(json)
     try {
-      parser.parser()
+      parser.parse()
       fail()
     } catch {
       case e: JSONLexerException => //pass test
@@ -159,7 +159,7 @@ class JSONPathTest extends FunSuite {
       """.stripMargin
     val parser = JSONParser(json)
     try {
-      parser.parser()
+      parser.parse()
       fail()
     } catch {
       case e: JSONLexerException => //pass test
@@ -190,7 +190,7 @@ class JSONPathTest extends FunSuite {
       """.stripMargin
     val parser = JSONParser(json)
     try {
-      parser.parser()
+      parser.parse()
       fail()
     } catch {
       case e: JSONSyntaxException => //pass test
@@ -205,7 +205,7 @@ class JSONPathTest extends FunSuite {
       """.stripMargin
     val parser = JSONParser(json)
     try {
-      parser.parser()
+      parser.parse()
       fail()
     } catch {
       case e: JSONSyntaxException => //pass test
@@ -219,7 +219,7 @@ class JSONPathTest extends FunSuite {
       """.stripMargin
     val parser = JSONParser(json)
     try {
-      parser.parser()
+      parser.parse()
       fail()
     } catch {
       case e: JSONSyntaxException => //pass test
@@ -233,7 +233,7 @@ class JSONPathTest extends FunSuite {
       """.stripMargin
     val parser = JSONParser(json)
     try {
-      parser.parser()
+      parser.parse()
       fail()
     } catch {
       case e: JSONSyntaxException => //pass test
@@ -245,7 +245,7 @@ class JSONPathTest extends FunSuite {
       """.stripMargin
     val parser1 = JSONParser(json1)
     try {
-      parser1.parser()
+      parser1.parse()
       fail()
     } catch {
       case e: JSONSyntaxException => //pass test
@@ -257,7 +257,7 @@ class JSONPathTest extends FunSuite {
       """.stripMargin
     val parser2 = JSONParser(json2)
     try {
-      parser2.parser()
+      parser2.parse()
       fail()
     } catch {
       case e: JSONSyntaxException => //pass test
@@ -266,7 +266,7 @@ class JSONPathTest extends FunSuite {
     val json3 = "[true,fals "
     val parser3 = JSONParser(json3)
     try {
-      parser3.parser()
+      parser3.parse()
       fail()
     } catch {
       case e: JSONLexerException => //pass test
@@ -275,7 +275,7 @@ class JSONPathTest extends FunSuite {
     val json4 = "[true,f,true] "
     val parser4 = JSONParser(json4)
     try {
-      parser4.parser()
+      parser4.parse()
       fail()
     } catch {
       case e: JSONLexerException => //pass test
@@ -284,7 +284,7 @@ class JSONPathTest extends FunSuite {
       val json4 = "[true,fa,true] "
       val parser4 = JSONParser(json4)
       try {
-        parser4.parser()
+        parser4.parse()
         fail()
       } catch {
         case e: JSONLexerException => //pass test
@@ -294,7 +294,7 @@ class JSONPathTest extends FunSuite {
       val json4 = "[true,fal,true] "
       val parser4 = JSONParser(json4)
       try {
-        parser4.parser()
+        parser4.parse()
         fail()
       } catch {
         case e: JSONLexerException => //pass test
@@ -304,7 +304,7 @@ class JSONPathTest extends FunSuite {
       val json4 = "[true,fals,true] "
       val parser4 = JSONParser(json4)
       try {
-        parser4.parser()
+        parser4.parse()
         fail()
       } catch {
         case e: JSONLexerException => //pass test
@@ -314,7 +314,7 @@ class JSONPathTest extends FunSuite {
       val json4 = "[t,fals,true] "
       val parser4 = JSONParser(json4)
       try {
-        parser4.parser()
+        parser4.parse()
         fail()
       } catch {
         case e: JSONLexerException => //pass test
@@ -324,7 +324,7 @@ class JSONPathTest extends FunSuite {
       val json4 = "[tr,fals,true] "
       val parser4 = JSONParser(json4)
       try {
-        parser4.parser()
+        parser4.parse()
         fail()
       } catch {
         case e: JSONLexerException => //pass test
@@ -334,7 +334,7 @@ class JSONPathTest extends FunSuite {
       val json4 = "[tru,fals,true] "
       val parser4 = JSONParser(json4)
       try {
-        parser4.parser()
+        parser4.parse()
         fail()
       } catch {
         case e: JSONLexerException => //pass test
@@ -344,7 +344,7 @@ class JSONPathTest extends FunSuite {
       val json4 = "[n,fals,true] "
       val parser4 = JSONParser(json4)
       try {
-        parser4.parser()
+        parser4.parse()
         fail()
       } catch {
         case e: JSONLexerException => //pass test
@@ -354,7 +354,7 @@ class JSONPathTest extends FunSuite {
       val json4 = "[nu,fals,true] "
       val parser4 = JSONParser(json4)
       try {
-        parser4.parser()
+        parser4.parse()
         fail()
       } catch {
         case e: JSONLexerException => //pass test
@@ -364,7 +364,7 @@ class JSONPathTest extends FunSuite {
       val json4 = "[nul,fals,true] "
       val parser4 = JSONParser(json4)
       try {
-        parser4.parser()
+        parser4.parse()
         fail()
       } catch {
         case e: JSONLexerException => //pass test
@@ -374,7 +374,7 @@ class JSONPathTest extends FunSuite {
       val json4 = "[a,fals,true] "
       val parser4 = JSONParser(json4)
       try {
-        parser4.parser()
+        parser4.parse()
         fail()
       } catch {
         case e: JSONSyntaxException => //pass test
@@ -384,7 +384,7 @@ class JSONPathTest extends FunSuite {
       val json4 = "[true,false a"
       val parser4 = JSONParser(json4)
       try {
-        parser4.parser()
+        parser4.parse()
         fail()
       } catch {
         case e: JSONSyntaxException => //pass test
@@ -394,7 +394,7 @@ class JSONPathTest extends FunSuite {
       val json4 = "{ \"key1\":true,\"key2\":false a"
       val parser4 = JSONParser(json4)
       try {
-        parser4.parser()
+        parser4.parse()
         fail()
       } catch {
         case e: JSONSyntaxException => //pass test
@@ -403,14 +403,14 @@ class JSONPathTest extends FunSuite {
     {
       val json4 = "[true]"
       val parser4 = JSONParser(json4)
-      val value = parser4.parser()
+      val value = parser4.parse()
       assert(value === JSONArray(List(true)))
     }
     {
       val json4 = "{\"key\" true}"
       val parser4 = JSONParser(json4)
       try {
-        parser4.parser()
+        parser4.parse()
         fail()
       } catch {
         case e: JSONSyntaxException => //pass test
@@ -419,7 +419,7 @@ class JSONPathTest extends FunSuite {
     {
       val json4 = "[true,false\r\n\t,true] "
       val parser4 = JSONParser(json4)
-      val value = parser4.parser()
+      val value = parser4.parse()
       assert(value == JSONArray(List(true, false, true)))
     }
   }
@@ -431,7 +431,7 @@ class JSONPathTest extends FunSuite {
       """.stripMargin
     val parser = JSONParser(json)
     try {
-      parser.parser()
+      parser.parse()
       fail()
     } catch {
       case e: JSONSyntaxException => //pass test
@@ -444,7 +444,7 @@ class JSONPathTest extends FunSuite {
         |[]
       """.stripMargin
     val parser = JSONParser(json)
-    val value = parser.parser()
+    val value = parser.parse()
     assert(value == JSONArray(List()))
 
     val json1 =
@@ -452,7 +452,7 @@ class JSONPathTest extends FunSuite {
         |{}
       """.stripMargin
     val parser1 = JSONParser(json1)
-    val value1 = parser1.parser()
+    val value1 = parser1.parse()
     assert(value1 == JSONObject(Map()))
   }
 
@@ -1084,14 +1084,14 @@ class JSONPathTest extends FunSuite {
       assert(value === Some(155e+012))
     }
     {
-      val jsonObj = JSONParser(json).parser()
+      val jsonObj = JSONParser(json).parse()
       assert(JSONPointer().read[Double]("/0", jsonObj) == Some(155e+012))
     }
     {
       assert(JSONPointer().read[Double]("/0", json.iterator) == Some(155e+012))
     }
     {
-      val jsonObj = JSONParser(json).parser()
+      val jsonObj = JSONParser(json).parse()
       assert(JSONPointer().read[Double]("/0", jsonObj) == Some(155e+012))
     }
     {
@@ -1110,7 +1110,7 @@ class JSONPathTest extends FunSuite {
     }
     {
       try {
-        JSONPointer().read("../", JSONParser(json).parser())
+        JSONPointer().read("../", JSONParser(json).parse())
         fail()
       } catch {
         case e: JSONPointerSyntaxException =>
@@ -1121,7 +1121,7 @@ class JSONPathTest extends FunSuite {
       assert(value === Some(155e+012))
     }
     {
-      val jsonObj = JSONParser(json).parser()
+      val jsonObj = JSONParser(json).parse()
       assert(JSONPointer().read[Double](new Path / "0", jsonObj) == Some(155e+012))
     }
     {
@@ -1131,7 +1131,7 @@ class JSONPathTest extends FunSuite {
       assert(JSONPointer(json).read[Double](new Path / "0") == Some(155e+012))
     }
     {
-      val jsonObj = JSONParser(json).parser()
+      val jsonObj = JSONParser(json).parse()
       assert(JSONPointer().read[Double](new Path / "0", jsonObj) == Some(155e+012))
     }
     {
