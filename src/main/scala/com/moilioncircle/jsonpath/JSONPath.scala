@@ -93,7 +93,7 @@ package com.moilioncircle.jsonpath
  * }}}
  *
  * @author leon.chen
- * @version 0.3.0
+ * @version 0.4.0
  * @since   1.0.0
  * @see [[http://tools.ietf.org/html/rfc6901 "JSON Pointer (RFC 6901)"]]
  * @see [[http://json.org "JSON (JavaScript Object Notation)"]]
@@ -101,6 +101,7 @@ package com.moilioncircle.jsonpath
  */
 
 import com.moilioncircle.jsonpath.RuleType.RuleType
+import spray.json._
 
 /**
  * scala DSL Wildcard
@@ -402,7 +403,7 @@ private[moilioncircle] class JSONPointer {
     json = Some(JSONParser(str).parser())
   }
 
-  private var json: Option[JSONType] = None
+  private var json: Option[JsValue] = None
 
   def read[T](path: String): Option[T] = {
     require(json != None, "json is None")
@@ -417,7 +418,7 @@ private[moilioncircle] class JSONPointer {
     read[T](path, JSONParser(json).parser(), List.empty)
   }
 
-  def read[T](path: String, json: JSONType): Option[T] = {
+  def read[T](path: String, json: JsValue): Option[T] = {
     val rules = JSONPointerParser(path).parsePath()
     read[T](merge(rules, List.empty), json)
   }
@@ -435,7 +436,7 @@ private[moilioncircle] class JSONPointer {
     read[T](path, JSONParser(json).parser(), filters)
   }
 
-  def read[T](path: String, json: JSONType, filters: List[Option[Any]]): Option[T] = {
+  def read[T](path: String, json: JsValue, filters: List[Option[Any]]): Option[T] = {
     val rules = JSONPointerParser(path).parsePath()
     read[T](merge(rules, filters), json)
   }
@@ -452,7 +453,7 @@ private[moilioncircle] class JSONPointer {
     read[T](path.build, json)
   }
 
-  def read[T](path: Path, json: JSONType): Option[T] = {
+  def read[T](path: Path, json: JsValue): Option[T] = {
     read[T](path.build, json)
   }
 
@@ -469,7 +470,12 @@ private[moilioncircle] class JSONPointer {
     read[T](path, JSONParser(json).parser())
   }
 
-  private def read[T](rules: List[Rule], json: JSONType): Option[T] = {
+  private def read[T](rules: List[Rule], json: JsValue): Option[T] = {
+    require(json match {
+      case JsObject(fields) => true
+      case JsArray(elements) => true
+      case _ => false
+    }, "need JsObject or JsArray")
     var temp: Any = json
     rules.foreach(rule => temp = solver(rule, temp))
     reduce(temp).asInstanceOf[T] match {
@@ -510,55 +516,55 @@ private[moilioncircle] class JSONPointer {
 
   private def solver(rule: Rule, temp: Any): Any = {
     temp match {
-      case jsonAry: JSONArray =>
-        val arySize = jsonAry.list.size
+      case jsonAry: JsArray =>
+        val arySize = jsonAry.elements.size
         rule.ruleType match {
           case RuleType.TOKEN =>
             val str = rule.rule
             if (str.indexOf(':') >= 0) {
               val from: Int = parseArrayIndex(str.substring(0, str.indexOf(":")), arySize, 0)
               val until = parseArrayIndex(str.substring(str.indexOf(":") + 1), arySize, arySize - 1)
-              if (from > until) jsonAry.list.slice(until, from + 1).reverse else jsonAry.list.slice(from, until + 1)
+              if (from > until) jsonAry.elements.slice(until, from + 1).reverse.toList else jsonAry.elements.slice(from, until + 1).toList
             } else {
-              jsonAry.list(parseArrayIndex(str, arySize, throw JSONPointerException(s"excepted a number but '$str'")))
+              jsonAry.elements(parseArrayIndex(str, arySize, throw JSONPointerException(s"excepted a number but '$str'")))
             }
           case RuleType.SPLIT =>
             rule.splits.map(e => {
-              jsonAry.list(parseArrayIndex(e, arySize, throw JSONPointerException(s"excepted a number but '$e'")))
+              jsonAry.elements(parseArrayIndex(e, arySize, throw JSONPointerException(s"excepted a number but '$e'")))
             })
           case RuleType.WILDCARD =>
             rule.filter match {
               case Some(f) =>
                 try {
-                  (0 until arySize).filter(f.asInstanceOf[Int => Boolean](_)).map(jsonAry.list(_)).toList
+                  (0 until arySize).filter(f.asInstanceOf[Int => Boolean](_)).map(jsonAry.elements(_)).toList
                 } catch {
                   case e: ClassCastException =>
                     try {
-                      (0 until arySize).filter(f.asInstanceOf[(Int, Int) => Boolean](_, arySize)).map(jsonAry.list(_)).toList
+                      (0 until arySize).filter(f.asInstanceOf[(Int, Int) => Boolean](_, arySize)).map(jsonAry.elements(_)).toList
                     } catch {
                       case e: ClassCastException => NotFound
                     }
                 }
-              case None => jsonAry.list
+              case None => jsonAry.elements.toList
               case _ => NotFound
             }
         }
-      case jsonObj: JSONObject =>
+      case jsonObj: JsObject =>
         rule.ruleType match {
           case RuleType.TOKEN =>
             val str = rule.rule
-            jsonObj.obj.getOrElse(str, NotFound)
+            jsonObj.fields.getOrElse(str, NotFound)
           case RuleType.SPLIT =>
-            rule.splits.map(jsonObj.obj.getOrElse(_, NotFound))
+            rule.splits.map(jsonObj.fields.getOrElse(_, NotFound))
           case RuleType.WILDCARD =>
             rule.filter match {
               case Some(f) =>
                 try {
-                  jsonObj.obj.keys.filter(f.asInstanceOf[String => Boolean](_)).map(jsonObj.obj(_)).toList
+                  jsonObj.fields.keys.filter(f.asInstanceOf[String => Boolean](_)).map(jsonObj.fields(_)).toList
                 } catch {
                   case e: ClassCastException => NotFound
                 }
-              case None => jsonObj.obj.values.toList
+              case None => jsonObj.fields.values.toList
               case _ => NotFound
             }
         }

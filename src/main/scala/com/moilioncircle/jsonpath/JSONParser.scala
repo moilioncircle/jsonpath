@@ -19,11 +19,7 @@ package com.moilioncircle.jsonpath
  * Created by leon on 15-6-21.
  */
 
-abstract class JSONType
-
-case class JSONObject(obj: Map[String, _]) extends JSONType
-
-case class JSONArray(list: List[_]) extends JSONType
+import spray.json._
 
 import scala.annotation.switch
 
@@ -53,8 +49,8 @@ class JSONParser {
   def parser() = {
     try {
       next() match {
-        case '{' => JSONObject(parseObject())
-        case '[' => JSONArray(parseArray())
+        case '{' => JsObject(parseObject())
+        case '[' => JsArray(parseArray())
         case e => throw JSONSyntaxException(s"excepted ['[' , '{'] but '$e' at row $row,column $column")
       }
     } catch {
@@ -62,8 +58,8 @@ class JSONParser {
     }
   }
 
-  private def parseObject(): Map[String, Any] = {
-    var map = Map.newBuilder[String, Any]
+  private def parseObject(): Map[String, JsValue] = {
+    var map = Map.newBuilder[String, JsValue]
     next() match {
       case '}' => map.result()
       case c =>
@@ -103,8 +99,8 @@ class JSONParser {
     }
   }
 
-  private def parseArray(): List[Any] = {
-    var list = List.newBuilder[Any]
+  private def parseArray(): Vector[JsValue] = {
+    var list = Vector.newBuilder[JsValue]
     next() match {
       case ']' =>
         list.result()
@@ -129,25 +125,25 @@ class JSONParser {
     }
   }
 
-  private def parseValue(ch: Char): Any = {
+  private def parseValue(ch: Char): JsValue = {
     (ch: @switch) match {
       case '"' =>
-        parseString()
+        JsString(parseString())
       case n@('0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '-') =>
-        scala.BigDecimal(parseNumber(n))
+        JsNumber(parseNumber(n))
       case 't' =>
         parseTrue(ch)
-        true
+        JsTrue
       case 'f' =>
         parseFalse(ch)
-        false
+        JsFalse
       case 'n' =>
         parseNull(ch)
-        null
+        JsNull
       case '{' =>
-        JSONObject(parseObject())
+        JsObject(parseObject())
       case '[' =>
-        JSONArray(parseArray())
+        JsArray(parseArray())
       case e => throw JSONSyntaxException(s"excepted [string , number , null , true , false , jsonObject , jsonArray] but '$e' at row $row,column $column")
     }
   }
