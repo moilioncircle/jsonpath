@@ -62,7 +62,7 @@ class JSONPathTest extends FunSuite {
       """.stripMargin
     val parser = JSONParser(json)
     parser.parser() match {
-      case JSONArray(list: List[Any]) => assert(list.toString === "List(1.55E14, 2, 3, JSONArray(List(true, false, null)), JSONObject(Map(a陈bc -> 1.233E-10, bcd -> true, c\rde -> null)), true, false, null)")
+      case JSONArray(list: List[Any]) => assert(list.toString === "List(1.55E+14, 2, 3, JSONArray(List(true, false, null)), JSONObject(Map(a陈bc -> 1.233E-10, bcd -> true, c\rde -> null)), true, false, null)")
     }
   }
 
