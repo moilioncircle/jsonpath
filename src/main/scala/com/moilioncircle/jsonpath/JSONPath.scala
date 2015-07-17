@@ -28,7 +28,7 @@ package com.moilioncircle.jsonpath
  * "": 0,
  * "a/b": 1,
  * "c%d": 2,
- * "e^f": 3,
+ * "e&#94;f": 3,
  * "g|h": 4,
  * "i\\j": 5,
  * "k\"l": 6,
@@ -44,7 +44,7 @@ package com.moilioncircle.jsonpath
  * "/"          0
  * "/a~1b"      1
  * "/c%d"       2
- * "/e^f"       3
+ * "/e&#94;f"       3
  * "/g|h"       4
  * "/i\\j"      5
  * "/k\"l"      6
